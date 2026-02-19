@@ -144,23 +144,6 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
 }
 </script>
 
-<style>
-/* Profile Page Inline Critical CSS */
-.tv-profile-breadcrumb{max-width:1360px;margin:0 auto;padding:12px 24px;font-size:13px;color:#9CA3AF}
-.tv-profile-breadcrumb a{color:#6B7280;text-decoration:none}
-.tv-profile-breadcrumb a:hover{color:#1B2A4A;text-decoration:underline}
-.tv-profile-breadcrumb__sep{margin:0 8px}
-</style>
-
-<!-- Breadcrumb Navigation -->
-<nav class="tv-profile-breadcrumb" aria-label="Breadcrumb">
-    <a href="<?php echo home_url(); ?>">Startseite</a>
-    <span class="tv-profile-breadcrumb__sep">›</span>
-    <a href="<?php echo home_url( '/unser-team/' ); ?>">Unser Team</a>
-    <span class="tv-profile-breadcrumb__sep">›</span>
-    <span><?php echo esc_html( $author_name ); ?></span>
-</nav>
-
 <!-- Profile Hero Section -->
 <header class="tv-profile-hero">
     <div class="tv-profile-hero__inner">
@@ -168,7 +151,7 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
         <img class="tv-profile-hero__photo"
              src="<?php echo esc_url( $author_photo_url ); ?>"
              alt="<?php echo esc_attr( $author_name ); ?> – Fachautor bei Test-Vergleiche.com"
-             width="140" height="140"
+             width="150" height="150"
              loading="eager">
         <?php endif; ?>
 
