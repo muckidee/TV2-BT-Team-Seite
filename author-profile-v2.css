@@ -100,32 +100,22 @@
 
 /* ===== CARD TITLE (H3) ===== */
 .author-work-card h3 {
-  font-family: 'Fraunces', 'Georgia', serif;
-  font-size: 15px;
+  font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
   font-weight: 600;
   color: var(--tv-navy);
-  line-height: 1.4;
+  line-height: 1.45;
   margin: 0;
-  padding: 14px 16px 8px;
+  padding: 14px 16px 16px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* ===== CARD EXCERPT (P) ===== */
+/* ===== CARD EXCERPT (P) - VERSTECKT ===== */
 .author-work-card p {
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 13px;
-  color: var(--tv-gray-500);
-  line-height: 1.55;
-  margin: 0;
-  padding: 0 16px 16px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  flex: 1;
+  display: none !important;
 }
 
 /* ===== CARD HOVER BUTTON EFFECT ===== */
@@ -596,3 +586,65 @@
 .author-work-card:nth-child(4) { animation-delay: 0.2s; }
 .author-work-card:nth-child(5) { animation-delay: 0.25s; }
 .author-work-card:nth-child(6) { animation-delay: 0.3s; }
+
+/* ===== TRUST SIGNALS ===== */
+.tv-trust-signals {
+  max-width: var(--tv-max-width);
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+
+.tv-trust-signals__inner {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  background: var(--tv-navy-pale);
+  border-radius: var(--tv-radius-lg);
+}
+
+.tv-trust-signal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tv-navy);
+}
+
+.tv-trust-signal svg {
+  color: var(--tv-green);
+  flex-shrink: 0;
+}
+
+/* ===== PRODUCTS WRAPPER ===== */
+.tv-products-wrapper {
+  margin-top: 0;
+}
+
+.tv-products-wrapper .author-heading {
+  display: none;
+}
+
+/* ===== BIO DESCRIPTION PARAGRAPHS ===== */
+.tv-bio-card__desc p {
+  margin: 0 0 12px;
+}
+
+.tv-bio-card__desc p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .tv-trust-signals__inner {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .tv-trust-signal {
+    font-size: 13px;
+  }
+}
