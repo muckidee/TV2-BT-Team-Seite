@@ -122,33 +122,7 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
 }
 </script>
 
-<!-- Schema Markup: BreadcrumbList -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Startseite",
-            "item": "https://test-vergleiche.com/"
-        },
-        {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Unser Team",
-            "item": "https://test-vergleiche.com/unser-team/"
-        },
-        {
-            "@type": "ListItem",
-            "position": 3,
-            "name": "<?php echo esc_attr( $author_name ); ?>",
-            "item": "<?php echo esc_url( $author_url ); ?>"
-        }
-    ]
-}
-</script>
+<!-- BreadcrumbList Schema wird von Rank Math bereitgestellt -->
 
 <!-- Schema Markup: ItemList (Produkttests) -->
 <script type="application/ld+json">
@@ -182,8 +156,8 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
 .tv-star--full svg{fill:#F59E0B}
 .tv-star--half svg{fill:#F59E0B}
 .tv-star--empty svg{fill:rgba(255,255,255,0.25)}
-.tv-rating-section{max-width:1200px;margin:0 auto;padding:0 24px 24px}
-.tv-rating-card{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:24px 32px;text-align:center;border:1px solid #F3F4F6}
+.tv-rating-section{max-width:600px;margin:0 auto;padding:0 24px 24px;display:flex;justify-content:center}
+.tv-rating-card{background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:28px 40px;text-align:center;border:1px solid #E5E7EB;width:100%;max-width:500px}
 .tv-rating-card__title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#1B2A4A;margin:0 0 6px}
 .tv-rating-card__subtitle{font-size:14px;color:#6B7280;margin:0}
 .tv-rating-card__body{display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -196,6 +170,10 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
 .tv-rating-status--success{color:#10B981;font-weight:500}
 .tv-rating-status--error{color:#EF4444}
 .tv-rating-status--voted{color:#6B7280;font-style:italic}
+.tv-trust-signals{max-width:600px;margin:0 auto;padding:0 24px 24px;display:flex;justify-content:center}
+.tv-trust-signals__inner{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:16px 28px;background:#F0F4F8;border-radius:16px;width:100%;max-width:500px}
+.tv-trust-signal{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:#1B2A4A}
+.tv-trust-signal svg{color:#10B981;flex-shrink:0}
 </style>
 
 <!-- Profile Hero Section -->

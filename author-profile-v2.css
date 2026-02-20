@@ -697,19 +697,23 @@
 
 /* ===== TRUST SIGNALS ===== */
 .tv-trust-signals {
-  max-width: var(--tv-max-width);
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 24px 24px;
+  display: flex;
+  justify-content: center;
 }
 
 .tv-trust-signals__inner {
   display: flex;
   justify-content: center;
-  gap: 32px;
+  gap: 24px;
   flex-wrap: wrap;
-  padding: 20px 24px;
+  padding: 16px 28px;
   background: var(--tv-navy-pale);
   border-radius: var(--tv-radius-lg);
+  width: 100%;
+  max-width: 500px;
 }
 
 .tv-trust-signal {
@@ -816,18 +820,22 @@
 
 /* Rating Section */
 .tv-rating-section {
-  max-width: var(--tv-max-width);
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 24px 24px;
+  display: flex;
+  justify-content: center;
 }
 
 .tv-rating-card {
   background: var(--tv-white);
   border-radius: var(--tv-radius-lg);
-  box-shadow: var(--tv-shadow-sm);
-  padding: 24px 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 28px 40px;
   text-align: center;
-  border: 1px solid var(--tv-gray-100);
+  border: 1px solid var(--tv-gray-200);
+  width: 100%;
+  max-width: 500px;
 }
 
 .tv-rating-card__header {
