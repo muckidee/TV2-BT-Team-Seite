@@ -4105,4 +4105,6 @@ function tv_enqueue_author_profile_v2_styles() {
 add_action( 'wp_enqueue_scripts', 'tv_enqueue_author_profile_v2_styles' );
 
 // TV2 Author Rating System
-require_once get_stylesheet_directory() . "/inc/tv-author-rating.php";
+
+// TV2 Sidebar Rating Display
+require_once get_stylesheet_directory() . "/inc/tv-sidebar-rating-display.php";
