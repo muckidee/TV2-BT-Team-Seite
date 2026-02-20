@@ -59,6 +59,12 @@ $author_articles_query = new WP_Query( array(
 $article_count = $author_articles_query->found_posts;
 wp_reset_postdata();
 
+// Get author rating data
+$rating_data = function_exists( 'tv_get_author_rating' ) ? tv_get_author_rating( $author_id ) : array( 'average' => 4.8, 'count' => 24 );
+$author_rating = $rating_data['average'];
+$rating_count = $rating_data['count'];
+$can_vote = function_exists( 'tv_has_ip_voted' ) ? ! tv_has_ip_voted( $author_id ) : true;
+
 // Generate description for meta and schema
 $meta_description = sprintf(
     '%s ist Fachautor bei Test-Vergleiche.com mit %d+ Produkttests. Experte fuer %s. Unabhaengige Vergleiche seit %s.',
@@ -96,6 +102,13 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
         "memberOf": {
             "@type": "Organization",
             "name": "Test-Vergleiche.com Redaktion"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "<?php echo esc_attr( $author_rating ); ?>",
+            "bestRating": "5",
+            "worstRating": "1",
+            "ratingCount": "<?php echo esc_attr( $rating_count ); ?>"
         }
     },
     "name": "<?php echo esc_attr( $page_title ); ?>",
@@ -189,9 +202,29 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
                 <span class="tv-profile-hero__stat-num"><?php echo $article_count; ?></span>
                 <span class="tv-profile-hero__stat-label">Produkttests</span>
             </div>
-            <div class="tv-profile-hero__stat">
-                <span class="tv-profile-hero__stat-num">4.8</span>
-                <span class="tv-profile-hero__stat-label">Bewertung</span>
+            <div class="tv-profile-hero__stat tv-profile-hero__stat--rating" id="ratingStatBox">
+                <div class="tv-rating-display">
+                    <span class="tv-rating-value" id="ratingValue"><?php echo esc_html( $author_rating ); ?></span>
+                    <div class="tv-rating-stars" id="ratingStars">
+                        <?php for ( $i = 1; $i <= 5; $i++ ) :
+                            $star_class = 'tv-star';
+                            if ( $i <= floor( $author_rating ) ) {
+                                $star_class .= ' tv-star--full';
+                            } elseif ( $i == ceil( $author_rating ) && ( $author_rating - floor( $author_rating ) ) >= 0.3 ) {
+                                $star_class .= ' tv-star--half';
+                            } else {
+                                $star_class .= ' tv-star--empty';
+                            }
+                        ?>
+                        <span class="<?php echo $star_class; ?>" data-value="<?php echo $i; ?>">
+                            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </span>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+                <span class="tv-profile-hero__stat-label">
+                    <span id="ratingCount"><?php echo esc_html( $rating_count ); ?></span> Bewertungen
+                </span>
             </div>
             <div class="tv-profile-hero__stat">
                 <span class="tv-profile-hero__stat-num"><?php echo esc_html( $author_since ); ?></span>
@@ -233,6 +266,32 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Alle Autoren
             </a>
+        </div>
+    </div>
+</section>
+
+<!-- Interactive Rating Section -->
+<section class="tv-rating-section" id="ratingSection">
+    <div class="tv-rating-card">
+        <div class="tv-rating-card__header">
+            <h3 class="tv-rating-card__title">Bewerten Sie <?php echo esc_html( $author_name ); ?></h3>
+            <p class="tv-rating-card__subtitle">Wie hilfreich finden Sie die Produkttests dieses Autors?</p>
+        </div>
+        <div class="tv-rating-card__body">
+            <div class="tv-rating-interactive" id="interactiveRating" data-author-id="<?php echo $author_id; ?>" data-can-vote="<?php echo $can_vote ? '1' : '0'; ?>">
+                <?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+                <button class="tv-star-btn" data-value="<?php echo $i; ?>" aria-label="<?php echo $i; ?> Stern<?php echo $i > 1 ? 'e' : ''; ?> vergeben">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </button>
+                <?php endfor; ?>
+            </div>
+            <p class="tv-rating-card__status" id="ratingStatus">
+                <?php if ( ! $can_vote ) : ?>
+                    <span class="tv-rating-status--voted">Sie haben bereits bewertet. Vielen Dank!</span>
+                <?php else : ?>
+                    <span class="tv-rating-status--prompt">Klicken Sie auf die Sterne zum Bewerten</span>
+                <?php endif; ?>
+            </p>
         </div>
     </div>
 </section>
@@ -347,6 +406,118 @@ document.addEventListener('DOMContentLoaded', function() {
         sortSelect.addEventListener('change', filterAndSort);
     }
 });
+
+// Author Rating System
+(function() {
+    const ratingContainer = document.getElementById('interactiveRating');
+    if (!ratingContainer) return;
+
+    const authorId = ratingContainer.dataset.authorId;
+    const canVote = ratingContainer.dataset.canVote === '1';
+    const starBtns = ratingContainer.querySelectorAll('.tv-star-btn');
+    const statusEl = document.getElementById('ratingStatus');
+    const ratingValueEl = document.getElementById('ratingValue');
+    const ratingCountEl = document.getElementById('ratingCount');
+    const ratingStarsEl = document.getElementById('ratingStars');
+
+    let selectedRating = 0;
+    let hasVoted = !canVote;
+
+    // Highlight stars on hover
+    function highlightStars(count) {
+        starBtns.forEach((btn, idx) => {
+            if (idx < count) {
+                btn.classList.add('tv-star-btn--hover');
+            } else {
+                btn.classList.remove('tv-star-btn--hover');
+            }
+        });
+    }
+
+    // Update star display in hero
+    function updateHeroStars(rating) {
+        if (!ratingStarsEl) return;
+        const stars = ratingStarsEl.querySelectorAll('.tv-star');
+        stars.forEach((star, idx) => {
+            star.classList.remove('tv-star--full', 'tv-star--half', 'tv-star--empty');
+            if (idx < Math.floor(rating)) {
+                star.classList.add('tv-star--full');
+            } else if (idx === Math.floor(rating) && (rating % 1) >= 0.3) {
+                star.classList.add('tv-star--half');
+            } else {
+                star.classList.add('tv-star--empty');
+            }
+        });
+    }
+
+    // Submit rating via AJAX
+    function submitRating(rating) {
+        if (hasVoted) {
+            statusEl.innerHTML = '<span class="tv-rating-status--error">Sie haben bereits bewertet.</span>';
+            return;
+        }
+
+        statusEl.innerHTML = '<span class="tv-rating-status--loading">Wird gespeichert...</span>';
+
+        // AJAX request
+        const formData = new FormData();
+        formData.append('action', 'tv_submit_rating');
+        formData.append('author_id', authorId);
+        formData.append('rating', rating);
+        formData.append('nonce', '<?php echo wp_create_nonce( "tv_rating_nonce" ); ?>');
+
+        fetch('<?php echo admin_url( "admin-ajax.php" ); ?>', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                hasVoted = true;
+                selectedRating = rating;
+
+                // Update display
+                if (ratingValueEl) ratingValueEl.textContent = data.data.average;
+                if (ratingCountEl) ratingCountEl.textContent = data.data.count;
+                updateHeroStars(data.data.average);
+
+                // Mark selected stars
+                starBtns.forEach((btn, idx) => {
+                    btn.classList.remove('tv-star-btn--hover');
+                    if (idx < rating) {
+                        btn.classList.add('tv-star-btn--selected');
+                    }
+                    btn.disabled = true;
+                });
+
+                statusEl.innerHTML = '<span class="tv-rating-status--success">' + data.data.message + '</span>';
+            } else {
+                statusEl.innerHTML = '<span class="tv-rating-status--error">' + data.data.message + '</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Rating error:', error);
+            statusEl.innerHTML = '<span class="tv-rating-status--error">Fehler beim Speichern. Bitte versuchen Sie es erneut.</span>';
+        });
+    }
+
+    // Event listeners
+    if (!hasVoted) {
+        starBtns.forEach((btn, idx) => {
+            btn.addEventListener('mouseenter', () => highlightStars(idx + 1));
+            btn.addEventListener('mouseleave', () => highlightStars(selectedRating));
+            btn.addEventListener('click', () => submitRating(idx + 1));
+        });
+
+        ratingContainer.addEventListener('mouseleave', () => highlightStars(selectedRating));
+    } else {
+        // Disable buttons if already voted
+        starBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.style.cursor = 'default';
+        });
+    }
+})();
 </script>
 
 <?php get_footer(); ?>

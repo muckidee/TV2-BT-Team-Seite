@@ -756,3 +756,207 @@
     font-size: 13px;
   }
 }
+
+/* ===== RATING SYSTEM ===== */
+
+/* Hero Rating Display */
+.tv-profile-hero__stat--rating {
+  min-width: 140px;
+}
+
+.tv-rating-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tv-rating-value {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tv-rating-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.tv-star {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+}
+
+.tv-star svg {
+  width: 100%;
+  height: 100%;
+  fill: rgba(255,255,255,0.3);
+  transition: fill 0.2s ease;
+}
+
+.tv-star--full svg {
+  fill: #F59E0B;
+}
+
+.tv-star--half svg {
+  fill: url(#star-gradient);
+}
+
+.tv-star--empty svg {
+  fill: rgba(255,255,255,0.25);
+}
+
+/* Rating Section */
+.tv-rating-section {
+  max-width: var(--tv-max-width);
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+
+.tv-rating-card {
+  background: var(--tv-white);
+  border-radius: var(--tv-radius-lg);
+  box-shadow: var(--tv-shadow-sm);
+  padding: 24px 32px;
+  text-align: center;
+  border: 1px solid var(--tv-gray-100);
+}
+
+.tv-rating-card__header {
+  margin-bottom: 20px;
+}
+
+.tv-rating-card__title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tv-navy);
+  margin: 0 0 6px;
+}
+
+.tv-rating-card__subtitle {
+  font-size: 14px;
+  color: var(--tv-gray-500);
+  margin: 0;
+}
+
+.tv-rating-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Interactive Rating Stars */
+.tv-rating-interactive {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tv-star-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.tv-star-btn svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--tv-gray-300);
+  transition: fill 0.15s ease, transform 0.15s ease;
+}
+
+.tv-star-btn:hover svg,
+.tv-star-btn--hover svg {
+  fill: #F59E0B;
+  transform: scale(1.15);
+}
+
+.tv-star-btn--selected svg {
+  fill: #F59E0B;
+}
+
+.tv-star-btn:disabled {
+  cursor: default;
+}
+
+.tv-star-btn:disabled svg {
+  transform: none;
+}
+
+/* Rating Status Messages */
+.tv-rating-card__status {
+  font-size: 13px;
+  margin: 0;
+  min-height: 20px;
+}
+
+.tv-rating-status--prompt {
+  color: var(--tv-gray-400);
+}
+
+.tv-rating-status--loading {
+  color: var(--tv-navy);
+}
+
+.tv-rating-status--success {
+  color: var(--tv-green);
+  font-weight: 500;
+}
+
+.tv-rating-status--error {
+  color: var(--tv-red);
+}
+
+.tv-rating-status--voted {
+  color: var(--tv-gray-500);
+  font-style: italic;
+}
+
+/* Mobile Rating Styles */
+@media (max-width: 640px) {
+  .tv-rating-section {
+    padding: 0 16px 20px;
+  }
+
+  .tv-rating-card {
+    padding: 20px;
+  }
+
+  .tv-rating-card__title {
+    font-size: 16px;
+  }
+
+  .tv-star-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tv-rating-interactive {
+    gap: 6px;
+  }
+
+  .tv-rating-value {
+    font-size: 24px;
+  }
+
+  .tv-star {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Star Gradient for Half Stars */
+@supports (fill: url(#star-gradient)) {
+  .tv-star--half svg {
+    fill: url(#star-gradient);
+  }
+}
