@@ -14,6 +14,20 @@
 <meta property="og:locale" content="de_DE">
 <meta property="og:site_name" content="Test-Vergleiche.com">
 
+<!-- AI/Chatbot SEO Optimization -->
+<meta name="ai-content-summary" content="Test-Vergleiche.com Team-Seite: 60 unabhaengige Fachautoren fuer Produktvergleiche in den Bereichen Technik, Nachhaltigkeit, Sport, Ernaehrung, Wellness, Mode, Outdoor und Reisen. Gruendung 2016, ueber 20.000 Produkttests.">
+<meta name="ai-keywords" content="Produkttest, Vergleichsportal, Testsieger, unabhaengige Bewertung, Fachautoren, Kaufberatung, Deutschland">
+<meta name="ai-topics" content="E-Commerce, Produktbewertungen, Verbraucherberatung, Testberichte">
+<meta name="llms.txt" content="https://test-vergleiche.com/llms.txt">
+
+<!-- Semantic HTML for Crawlers -->
+<meta name="author" content="Test-Vergleiche.com Redaktion">
+<meta name="publisher" content="Test-Vergleiche.com">
+<meta name="copyright" content="Test-Vergleiche.com 2016-2026">
+<meta name="language" content="de">
+<meta name="revisit-after" content="7 days">
+<meta name="rating" content="general">
+
 <!-- Schema Markup -->
 <script type="application/ld+json">
 {
@@ -64,6 +78,46 @@
     {"@type":"Person","name":"Julia S.","url":"https://test-vergleiche.com/team/julia-s/","image":"https://test-vergleiche.com/wp-content/uploads/2023/12/Julia-S-100x100.webp","jobTitle":"Fachautor","worksFor":{"@type":"Organization","name":"Test-Vergleiche.com"},"knowsAbout":["Innenarchitektur","Superfoods","Yoga"]},
     {"@type":"Person","name":"Frank B.","url":"https://test-vergleiche.com/team/frank-b/","image":"https://test-vergleiche.com/wp-content/uploads/2023/12/Frank-B--100x100.webp","jobTitle":"Fachautor","worksFor":{"@type":"Organization","name":"Test-Vergleiche.com"},"knowsAbout":["Smart Home","Heimautomation","Elektronik"]},
     {"@type":"Person","name":"Florian K.","url":"https://test-vergleiche.com/team/florian-k/","image":"https://test-vergleiche.com/wp-content/uploads/2023/12/Florian-K-100x100.webp","jobTitle":"Fachautor","worksFor":{"@type":"Organization","name":"Test-Vergleiche.com"},"knowsAbout":["Elektronik","Computer","Mode","Heimwerken"]}
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Wie viele Autoren hat Test-Vergleiche.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Test-Vergleiche.com hat 60 unabhaengige Fachautoren, die Produkte in verschiedenen Kategorien wie Technik, Sport, Nachhaltigkeit, Ernaehrung, Wellness, Mode, Outdoor und Reisen vergleichen und bewerten."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Wie arbeiten die Autoren von Test-Vergleiche.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Unsere Autoren vergleichen Produkte anhand von Herstellerangaben, Kundenbewertungen und Testergebnissen Dritter. Alle Tests sind unabhaengig und transparent, ohne Herstellereinfluss."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Seit wann gibt es Test-Vergleiche.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Test-Vergleiche.com wurde 2016 gegruendet und ist seitdem ein unabhaengiges Vergleichsportal mit ueber 20.000 Produktvergleichen."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "In welchen Kategorien testet Test-Vergleiche.com?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Unsere Fachautoren testen in den Kategorien: Technik, Sport & Fitness, Haushalt, Beauty & Pflege, Outdoor, Nachhaltigkeit, Ernaehrung, Wellness, Mode und Reisen."
+      }
+    }
   ]
 }
 </script>
@@ -446,7 +500,12 @@ img{display:block;max-width:100%}
   </div>
   <div class="product-refs__grid" id="productGrid"></div>
   <div class="product-refs__more">
-    <a href="https://test-vergleiche.com/sitemap-pages/" class="product-refs__more-btn">Alle 20.000+ Vergleiche ansehen &#8594;</a>
+    <button class="product-refs__more-btn" id="loadMoreProducts">
+      <span id="loadMoreText">Mehr Produkte laden</span>
+      <svg id="loadMoreSpinner" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"><animate attributeName="stroke-dashoffset" values="32;0" dur="1s" repeatCount="indefinite"/></circle></svg>
+      &#8594;
+    </button>
+    <p class="product-refs__count" id="productCount" style="margin-top:12px;font-size:13px;color:var(--gray-500)"></p>
   </div>
 </section>
 
@@ -461,14 +520,6 @@ img{display:block;max-width:100%}
   </div>
 </section>
 
-<!-- COMMENTS (collapsed) -->
-<details class="comments-section">
-  <summary>Kommentare anzeigen (2)</summary>
-  <div class="comments-section__body">
-    <p><strong>Irene64:</strong> Die Anleitung ist super verstaendlich und gut strukturiert!</p>
-    <p style="margin-top:12px"><strong>Franziska:</strong> Die Anleitung war super klar und hat mir sofort bei der Installation geholfen.</p>
-  </div>
-</details>
 
 <!-- COMPARE BAR -->
 <div class="compare-bar" id="compareBar">
@@ -534,6 +585,21 @@ const products=[
   {id:'hochbeet',name:'Keter Hochbeet Urban Bloomer XL',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Hochbeet',cat:'outdoor',badge:'empfehlung',rating:4.4,reviews:634,features:['Selbstbewaesserungssystem','Wetterbestaendiger Kunststoff','Ergonomische Arbeitshoehe'],authorId:'marie-w',price:'89,99',priceOld:'109,99',compareUrl:'https://test-vergleiche.com/hochbeet-test/'}
 ];
 
+// Additional products for lazy loading
+const moreProducts=[
+  {id:'espressomaschine',name:'DeLonghi Magnifica S Kaffeevollautomat',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Kaffeevollautomat',cat:'haushalt',badge:'winner',rating:4.7,reviews:2341,features:['13-stufiges Mahlwerk','Milchaufschaeumer integriert','Touch-Bedienung'],authorId:'marcel-r',price:'349,00',priceOld:'449,00',compareUrl:'https://test-vergleiche.com/kaffeevollautomat-test/'},
+  {id:'yoga-matte',name:'Manduka PRO Yogamatte 6mm',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Yogamatte',cat:'sport',badge:'empfehlung',rating:4.9,reviews:1567,features:['Geschlossene Zelloberflaeche','Lebenslange Garantie','Rutschfest & hygienisch'],authorId:'laura-s',price:'119,00',priceOld:null,compareUrl:'https://test-vergleiche.com/yogamatte-test/'},
+  {id:'kopfhoerer',name:'Sony WH-1000XM5 Over-Ear',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Kopfhoerer',cat:'technik',badge:'bestseller',rating:4.8,reviews:4521,features:['Branchenfuehrendes ANC','30 Std. Akkulaufzeit','Multipoint-Verbindung'],authorId:'maximilian-b',price:'329,00',priceOld:'379,00',compareUrl:'https://test-vergleiche.com/kopfhoerer-test/'},
+  {id:'wanderschuhe',name:'Salomon X Ultra 4 GTX Wanderschuhe',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Wanderschuhe',cat:'outdoor',badge:'empfehlung',rating:4.6,reviews:892,features:['Gore-Tex wasserdicht','Contagrip Sohle','Leichtgewicht 390g'],authorId:'tim-h',price:'159,00',priceOld:'179,00',compareUrl:'https://test-vergleiche.com/wanderschuhe-test/'},
+  {id:'staubsauger',name:'Dyson V15 Detect Absolute',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Staubsauger',cat:'haushalt',badge:'winner',rating:4.8,reviews:3245,features:['Laser-Stauberkennung','60 Min. Laufzeit','LCD-Display'],authorId:'frank-b',price:'649,00',priceOld:'749,00',compareUrl:'https://test-vergleiche.com/staubsauger-test/'},
+  {id:'sonnencreme',name:'La Roche-Posay Anthelios LSF 50+',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Sonnencreme',cat:'beauty',badge:'empfehlung',rating:4.5,reviews:1823,features:['Sehr hoher Schutz','Wasserfest','Fuer empfindliche Haut'],authorId:'sarah-m',price:'19,99',priceOld:null,compareUrl:'https://test-vergleiche.com/sonnencreme-test/'},
+  {id:'e-bike',name:'Cube Reaction Hybrid Pro 625',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=E-Bike',cat:'outdoor',badge:'bestseller',rating:4.7,reviews:456,features:['Bosch CX Motor','625Wh Akku','Shimano Deore 12-Gang'],authorId:'lukas-s',price:'2.999,00',priceOld:'3.299,00',compareUrl:'https://test-vergleiche.com/e-bike-test/'},
+  {id:'luftreiniger',name:'Philips Series 2000i Luftreiniger',image:'https://placehold.co/280x180/f3f4f6/1B2A4A?text=Luftreiniger',cat:'haushalt',badge:'empfehlung',rating:4.6,reviews:1234,features:['HEPA & Aktivkohlefilter','App-Steuerung','Bis 79m2 Raumgroesse'],authorId:'julia-s',price:'249,00',priceOld:'299,00',compareUrl:'https://test-vergleiche.com/luftreiniger-test/'}
+];
+
+let loadedBatches = 0;
+const PRODUCTS_PER_BATCH = 8;
+
 const svgStar='<svg viewBox="0 0 20 20" fill="#F59E0B"><path d="M10 15.27L16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z"/></svg>';
 const svgStarHalf='<svg viewBox="0 0 20 20"><defs><linearGradient id="hg"><stop offset="50%" stop-color="#F59E0B"/><stop offset="50%" stop-color="#D1D5DB"/></linearGradient></defs><path d="M10 15.27L16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z" fill="url(#hg)"/></svg>';
 const svgStarEmpty='<svg viewBox="0 0 20 20" fill="#D1D5DB"><path d="M10 15.27L16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z"/></svg>';
@@ -585,9 +651,26 @@ function togDesc(id,btn){const el=document.getElementById('desc-'+id);el.classLi
 function clearFilter(){activeFilter='all';document.querySelectorAll('.sidebar__filter-item').forEach(i=>{i.classList.remove('sidebar__filter-item--active');i.setAttribute('aria-selected','false');});document.querySelector('[data-filter="all"]').classList.add('sidebar__filter-item--active');document.querySelector('[data-filter="all"]').setAttribute('aria-selected','true');renderAuthors();}
 
 /* ===== PRODUCT CARDS ===== */
+function getAllProducts(){
+  const allProds = [...products];
+  for(let i=0;i<loadedBatches;i++){
+    allProds.push(...moreProducts);
+  }
+  return allProds;
+}
+
 function renderProducts(){
   const grid=document.getElementById('productGrid');
-  const f=activeCat==='all'?products:products.filter(p=>p.cat===activeCat);
+  const allProds = getAllProducts();
+  const f=activeCat==='all'?allProds:allProds.filter(p=>p.cat===activeCat);
+
+  // Update product count
+  const countEl=document.getElementById('productCount');
+  if(countEl)countEl.textContent=f.length+' von 20.000+ Produkten angezeigt';
+
+  // Show/hide load more button
+  const loadMoreBtn=document.getElementById('loadMoreProducts');
+  if(loadMoreBtn)loadMoreBtn.style.display=loadedBatches>=3?'none':'inline-flex';
   grid.innerHTML=f.map(p=>{
     const a=authors.find(x=>x.id===p.authorId);
     const badgeCls=p.badge==='winner'?'--winner':p.badge==='bestseller'?'--bestseller':'--empfehlung';
@@ -656,6 +739,42 @@ document.getElementById('detOverlay').addEventListener('click',e=>{if(e.target==
 
 /* ===== KEYBOARD ===== */
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-overlay--visible').forEach(o=>o.classList.remove('modal-overlay--visible'));closeSidebar();}});
+
+/* ===== LOAD MORE PRODUCTS ===== */
+document.getElementById('loadMoreProducts').addEventListener('click',function(){
+  const btn=this;
+  const textEl=document.getElementById('loadMoreText');
+  const spinnerEl=document.getElementById('loadMoreSpinner');
+
+  // Show loading state
+  textEl.textContent='Laden...';
+  spinnerEl.style.display='inline';
+  btn.disabled=true;
+
+  // Simulate lazy load delay
+  setTimeout(()=>{
+    loadedBatches++;
+    renderProducts();
+
+    // Reset button
+    spinnerEl.style.display='none';
+    btn.disabled=false;
+
+    if(loadedBatches>=3){
+      textEl.textContent='Alle geladen';
+      btn.style.display='none';
+    }else{
+      textEl.textContent='Mehr Produkte laden';
+    }
+
+    // Scroll to new products smoothly
+    const grid=document.getElementById('productGrid');
+    const cards=grid.querySelectorAll('.product-card');
+    if(cards.length>8){
+      cards[cards.length-8].scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },800);
+});
 
 /* ===== INIT ===== */
 updateCounts();
