@@ -25,8 +25,17 @@ $author_photo_alt = $author_photo_id ? get_post_meta( $author_photo_id, '_wp_att
 
 // ACF Fields (if available) - fallback to defaults
 $author_role      = function_exists('get_field') ? get_field( 'author_role', $author_id ) : 'Fachautor';
-$author_since     = function_exists('get_field') ? get_field( 'author_since', $author_id ) : '2018';
+$author_since_acf = function_exists('get_field') ? get_field( 'author_since', $author_id ) : '';
 $expertise_tags   = function_exists('get_field') ? get_field( 'expertise_tags', $author_id ) : array();
+
+// Generate consistent "Dabei seit" year based on author slug (2017-2026)
+if ( empty( $author_since_acf ) ) {
+    // Use author slug hash for consistent random year per author
+    $slug_hash = crc32( $author_slug );
+    $author_since = 2017 + ( abs( $slug_hash ) % 10 ); // 2017-2026
+} else {
+    $author_since = $author_since_acf;
+}
 
 // Extract expertise from content if no ACF
 if ( empty( $expertise_tags ) ) {
@@ -143,6 +152,12 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
     }
 }
 </script>
+
+<!-- CSS & Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700&family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?php echo get_stylesheet_directory_uri(); ?>/css/author-profile-v2.css?v=2.0.1">
 
 <!-- Profile Hero Section -->
 <header class="tv-profile-hero">
