@@ -762,6 +762,10 @@
 /* Hero Rating Display */
 .tv-profile-hero__stat--rating {
   min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .tv-rating-display {
@@ -782,6 +786,7 @@
 .tv-rating-stars {
   display: flex;
   gap: 2px;
+  justify-content: center;
 }
 
 .tv-star {

@@ -170,7 +170,33 @@ $page_title = $author_name . ' – Fachautor bei Test-Vergleiche.com | ' . $arti
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700&family=Outfit:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?php echo get_stylesheet_directory_uri(); ?>/css/author-profile-v2.css?v=2.0.1">
+<link rel="stylesheet" href="<?php echo get_stylesheet_directory_uri(); ?>/css/author-profile-v2.css?v=2.0.2">
+<style>
+/* Critical Rating CSS - Inline for cache bypass */
+.tv-profile-hero__stat--rating{min-width:140px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tv-rating-display{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px}
+.tv-rating-value{font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:#fff}
+.tv-rating-stars{display:flex;gap:2px;justify-content:center}
+.tv-star{width:18px;height:18px;display:inline-flex}
+.tv-star svg{width:100%;height:100%;fill:rgba(255,255,255,0.3)}
+.tv-star--full svg{fill:#F59E0B}
+.tv-star--half svg{fill:#F59E0B}
+.tv-star--empty svg{fill:rgba(255,255,255,0.25)}
+.tv-rating-section{max-width:1200px;margin:0 auto;padding:0 24px 24px}
+.tv-rating-card{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);padding:24px 32px;text-align:center;border:1px solid #F3F4F6}
+.tv-rating-card__title{font-family:'Fraunces',serif;font-size:18px;font-weight:600;color:#1B2A4A;margin:0 0 6px}
+.tv-rating-card__subtitle{font-size:14px;color:#6B7280;margin:0}
+.tv-rating-card__body{display:flex;flex-direction:column;align-items:center;gap:12px}
+.tv-rating-interactive{display:flex;gap:8px;justify-content:center}
+.tv-star-btn{width:40px;height:40px;padding:0;border:none;background:transparent;cursor:pointer}
+.tv-star-btn svg{width:100%;height:100%;fill:#D1D5DB;transition:fill 0.15s ease}
+.tv-star-btn:hover svg,.tv-star-btn--hover svg,.tv-star-btn--selected svg{fill:#F59E0B}
+.tv-rating-card__status{font-size:13px;margin:0;min-height:20px}
+.tv-rating-status--prompt{color:#9CA3AF}
+.tv-rating-status--success{color:#10B981;font-weight:500}
+.tv-rating-status--error{color:#EF4444}
+.tv-rating-status--voted{color:#6B7280;font-style:italic}
+</style>
 
 <!-- Profile Hero Section -->
 <header class="tv-profile-hero">
