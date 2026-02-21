@@ -396,6 +396,126 @@ img{display:block;max-width:100%}
 </style>
 </head>
 <body>
+<!-- TV2 Navigation Header -->
+<style>
+.tv2-nav-header {
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0;
+}
+.tv2-nav-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.tv2-nav-logo img {
+  max-width: 180px;
+  height: auto;
+}
+.tv2-nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tv2-nav-menu li {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.tv2-nav-menu a {
+  display: block;
+  padding: 10px 16px;
+  color: #1D2D44;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.tv2-nav-menu a:hover {
+  background: #f0f2f5;
+  color: #3E5C76;
+}
+.tv2-nav-menu .active a {
+  background: #1D2D44;
+  color: #ffffff;
+}
+.tv2-nav-mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+.tv2-nav-mobile-toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke: #1D2D44;
+}
+@media (max-width: 768px) {
+  .tv2-nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    flex-direction: column;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    gap: 4px;
+  }
+  .tv2-nav-menu.open {
+    display: flex;
+  }
+  .tv2-nav-menu a {
+    width: 100%;
+    text-align: center;
+  }
+  .tv2-nav-mobile-toggle {
+    display: block;
+  }
+  .tv2-nav-container {
+    position: relative;
+  }
+  .tv2-nav-logo img {
+    max-width: 140px;
+  }
+}
+</style>
+<header class="tv2-nav-header">
+  <div class="tv2-nav-container">
+    <a href="https://test-vergleiche.com/" class="tv2-nav-logo">
+      <img src="https://test-vergleiche.com/wp-content/uploads/2023/12/test-vergleiche-com-logo.webp" alt="Test-Vergleiche.com" loading="eager">
+    </a>
+    <button class="tv2-nav-mobile-toggle" onclick="document.querySelector('.tv2-nav-menu').classList.toggle('open')" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <ul class="tv2-nav-menu">
+      <li><a href="https://test-vergleiche.com/">Startseite</a></li>
+      <li><a href="https://test-vergleiche.com/baumarkt/">Baumarkt</a></li>
+      <li><a href="https://test-vergleiche.com/freizeit/">Freizeit</a></li>
+      <li><a href="https://test-vergleiche.com/wohnen/">Wohnen</a></li>
+      <li><a href="https://test-vergleiche.com/haushalt/">Haushalt</a></li>
+      <li class="active"><a href="https://test-vergleiche.com/unser-team/">Unser Team</a></li>
+    </ul>
+  </div>
+</header>
+<!-- Ende TV2 Navigation Header -->
 
 <!-- BREADCRUMB -->
 <nav class="breadcrumb" aria-label="Breadcrumb">
