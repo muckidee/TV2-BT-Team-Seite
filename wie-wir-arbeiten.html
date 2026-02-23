@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wie wir arbeiten — Test-Vergleiche.com</title>
+<meta name="description" content="Erfahren Sie, wie Test-Vergleiche.com arbeitet. Transparente Produktvergleiche durch 50+ Fachredakteure. Unabhängig seit 2016.">
+<link rel="canonical" href="https://test-vergleiche.com/wie-wir-arbeiten/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   VARIANTE 1: EDITORIAL / MAGAZIN
-   Elegant, redaktionell, Zeitschriften-Look
-   Fonts: Playfair Display + DM Sans
-   Colors: Ink Black, Warm White, Copper Accent
+   RESET & BASE
    ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -32,10 +31,133 @@ body {
   color: var(--v1-text);
 }
 
-/* HERO */
+/* ============================================================
+   TV2 NAVIGATION HEADER
+   ============================================================ */
+.tv2-nav-header {
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 0;
+}
+.tv2-nav-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.tv2-nav-logo img {
+  max-width: 180px;
+  height: auto;
+}
+.tv2-nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tv2-nav-menu li {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.tv2-nav-menu a {
+  display: block;
+  padding: 10px 16px;
+  color: #1D2D44;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.tv2-nav-menu a:hover {
+  background: #f0f2f5;
+  color: #3E5C76;
+}
+.tv2-nav-menu .active a {
+  background: #1D2D44;
+  color: #ffffff;
+}
+.tv2-nav-mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+.tv2-nav-mobile-toggle svg {
+  width: 24px;
+  height: 24px;
+  stroke: #1D2D44;
+}
+@media (max-width: 768px) {
+  .tv2-nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    flex-direction: column;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    gap: 4px;
+  }
+  .tv2-nav-menu.open {
+    display: flex;
+  }
+  .tv2-nav-menu a {
+    width: 100%;
+    text-align: center;
+  }
+  .tv2-nav-mobile-toggle {
+    display: block;
+  }
+  .tv2-nav-container {
+    position: relative;
+  }
+  .tv2-nav-logo img {
+    max-width: 140px;
+  }
+}
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+.breadcrumb {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 16px 40px;
+  font-size: 13px;
+  color: var(--v1-muted);
+}
+.breadcrumb a {
+  color: var(--v1-muted);
+  text-decoration: none;
+}
+.breadcrumb a:hover {
+  color: var(--v1-ink);
+  text-decoration: underline;
+}
+.breadcrumb__sep {
+  margin: 0 8px;
+  color: var(--v1-border);
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
 .v1-hero {
   position: relative;
-  min-height: 80vh;
+  min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,7 +193,7 @@ body {
 .v1-hero-content {
   position: relative;
   z-index: 2;
-  padding: 120px 40px;
+  padding: 100px 40px;
   max-width: 780px;
 }
 .v1-hero-eyebrow {
@@ -86,7 +208,7 @@ body {
 }
 .v1-hero h1 {
   font-family: 'Playfair Display', serif;
-  font-size: clamp(40px, 5.5vw, 68px);
+  font-size: clamp(36px, 5vw, 64px);
   font-weight: 400;
   line-height: 1.12;
   color: #fff;
@@ -126,6 +248,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   border-bottom: 1px solid var(--v1-border);
+  background: #fff;
 }
 .v1-stat {
   padding: 40px 32px;
@@ -411,118 +534,293 @@ body {
   margin-top: 32px;
 }
 
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.tv2-footer {
+  background: var(--v1-ink);
+  color: rgba(255,255,255,0.7);
+  padding: 60px 40px 40px;
+}
+.tv2-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.tv2-footer-top {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 60px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.tv2-footer-brand h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.tv2-footer-brand p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.5);
+}
+.tv2-footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+.tv2-footer-col h4 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--v1-copper);
+  margin-bottom: 20px;
+}
+.tv2-footer-col ul {
+  list-style: none;
+}
+.tv2-footer-col li {
+  margin-bottom: 12px;
+}
+.tv2-footer-col a {
+  color: rgba(255,255,255,0.6);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+.tv2-footer-col a:hover {
+  color: #fff;
+}
+.tv2-footer-bottom {
+  padding-top: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.tv2-footer-copy {
+  font-size: 13px;
+  color: rgba(255,255,255,0.4);
+}
+.tv2-footer-legal {
+  display: flex;
+  gap: 24px;
+}
+.tv2-footer-legal a {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+}
+.tv2-footer-legal a:hover {
+  color: #fff;
+}
+
 /* RESPONSIVE */
 @media (max-width: 900px) {
   .v1-editorial-grid, .v1-cards-row, .v1-compare-grid { grid-template-columns: 1fr; }
   .v1-compare-vs { display: none; }
   .v1-process-item { grid-template-columns: 60px 1fr; gap: 20px; }
+  .tv2-footer-top { grid-template-columns: 1fr; }
+  .tv2-footer-links { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 600px) {
   .v1-section { padding: 64px 20px; }
   .v1-stats { grid-template-columns: 1fr 1fr; }
   .v1-stat { border-bottom: 1px solid var(--v1-border); }
+  .breadcrumb { padding: 12px 20px; }
+  .tv2-footer { padding: 40px 20px 30px; }
+  .tv2-footer-links { grid-template-columns: 1fr; gap: 30px; }
+  .tv2-footer-bottom { flex-direction: column; text-align: center; }
 }
 </style>
 </head>
 <body>
 
-  <section class="v1-hero">
-    <div class="v1-hero-deco"></div>
-    <div class="v1-hero-content">
-      <div class="v1-hero-eyebrow">Über uns · Seit 2016</div>
-      <h1>Transparenz ist unser<br>wichtigstes <em>Versprechen</em></h1>
-      <p class="v1-hero-sub">Wir helfen Verbrauchern, das richtige Produkt zu finden — mit sorgfältiger Recherche, unabhängiger Bewertung und klarer Aufbereitung.</p>
-      <div class="v1-hero-divider"></div>
-    </div>
-  </section>
-
-  <div class="v1-stats">
-    <div class="v1-stat"><div class="v1-stat-num">20.000+</div><div class="v1-stat-label">Vergleiche</div></div>
-    <div class="v1-stat"><div class="v1-stat-num">50+</div><div class="v1-stat-label">Fachredakteure</div></div>
-    <div class="v1-stat"><div class="v1-stat-num">120.000</div><div class="v1-stat-label">Produkte</div></div>
-    <div class="v1-stat"><div class="v1-stat-num">2016</div><div class="v1-stat-label">Gegründet</div></div>
+<!-- TV2 Navigation Header -->
+<header class="tv2-nav-header">
+  <div class="tv2-nav-container">
+    <a href="https://test-vergleiche.com/" class="tv2-nav-logo">
+      <img src="https://test-vergleiche.com/wp-content/uploads/2023/12/test-vergleiche-com-logo.webp" alt="Test-Vergleiche.com" loading="eager">
+    </a>
+    <button class="tv2-nav-mobile-toggle" onclick="document.querySelector('.tv2-nav-menu').classList.toggle('open')" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <ul class="tv2-nav-menu">
+      <li><a href="https://test-vergleiche.com/">Startseite</a></li>
+      <li><a href="https://test-vergleiche.com/baumarkt/">Baumarkt</a></li>
+      <li><a href="https://test-vergleiche.com/freizeit/">Freizeit</a></li>
+      <li><a href="https://test-vergleiche.com/haushalt/">Haushalt</a></li>
+      <li><a href="https://test-vergleiche.com/unser-team/">Unser Team</a></li>
+      <li class="active"><a href="https://test-vergleiche.com/wie-wir-arbeiten/">So arbeiten wir</a></li>
+    </ul>
   </div>
+</header>
 
-  <section class="v1-editorial">
-    <div class="v1-section">
-      <div class="v1-section-label">Unsere Mission</div>
-      <h2>So arbeitet<br>Test-Vergleiche.com</h2>
-      <div class="v1-editorial-grid">
-        <div>
-          <p class="dropcap">Test-Vergleiche.com wurde gegründet, um Verbrauchern bei Kaufentscheidungen zu helfen. Mit über 20.000 Produktvergleichen und einem Team aus mehr als 50 Fachredakteuren sind wir heute eines der führenden Vergleichsportale in Deutschland.</p>
-          <p style="color:var(--v1-muted)">Unsere Mission ist einfach: Wir wollen Ihnen die Produktsuche erleichtern, indem wir Informationen aus verschiedenen Quellen zusammenführen und übersichtlich aufbereiten.</p>
-        </div>
-        <div>
-          <div class="v1-cards-row" style="grid-template-columns:1fr">
-            <div class="v1-card positive"><div class="v1-card-accent"></div><h4>Was wir sind</h4><p>Ein redaktionelles Vergleichsportal — wir sammeln, analysieren und bereiten Produktdaten übersichtlich auf.</p></div>
-            <div class="v1-card negative"><div class="v1-card-accent"></div><h4>Was wir nicht sind</h4><p>Kein Testinstitut — wir führen keine eigenen Warentests, Laboruntersuchungen oder physischen Prüfungen durch.</p></div>
-          </div>
+<!-- Breadcrumb -->
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="https://test-vergleiche.com/">Startseite</a>
+  <span class="breadcrumb__sep">›</span>
+  <span>Wie wir arbeiten</span>
+</nav>
+
+<!-- HERO -->
+<section class="v1-hero">
+  <div class="v1-hero-deco"></div>
+  <div class="v1-hero-content">
+    <div class="v1-hero-eyebrow">Über uns · Seit 2016</div>
+    <h1>Transparenz ist unser<br>wichtigstes <em>Versprechen</em></h1>
+    <p class="v1-hero-sub">Wir helfen Verbrauchern, das richtige Produkt zu finden — mit sorgfältiger Recherche, unabhängiger Bewertung und klarer Aufbereitung.</p>
+    <div class="v1-hero-divider"></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="v1-stats">
+  <div class="v1-stat"><div class="v1-stat-num">20.000+</div><div class="v1-stat-label">Vergleiche</div></div>
+  <div class="v1-stat"><div class="v1-stat-num">50+</div><div class="v1-stat-label">Fachredakteure</div></div>
+  <div class="v1-stat"><div class="v1-stat-num">120.000</div><div class="v1-stat-label">Produkte</div></div>
+  <div class="v1-stat"><div class="v1-stat-num">2016</div><div class="v1-stat-label">Gegründet</div></div>
+</div>
+
+<!-- EDITORIAL -->
+<section class="v1-editorial">
+  <div class="v1-section">
+    <div class="v1-section-label">Unsere Mission</div>
+    <h2>So arbeitet<br>Test-Vergleiche.com</h2>
+    <div class="v1-editorial-grid">
+      <div>
+        <p class="dropcap">Test-Vergleiche.com wurde gegründet, um Verbrauchern bei Kaufentscheidungen zu helfen. Mit über 20.000 Produktvergleichen und einem Team aus mehr als 50 Fachredakteuren sind wir heute eines der führenden Vergleichsportale in Deutschland.</p>
+        <p style="color:var(--v1-muted)">Unsere Mission ist einfach: Wir wollen Ihnen die Produktsuche erleichtern, indem wir Informationen aus verschiedenen Quellen zusammenführen und übersichtlich aufbereiten.</p>
+      </div>
+      <div>
+        <div class="v1-cards-row" style="grid-template-columns:1fr">
+          <div class="v1-card positive"><div class="v1-card-accent"></div><h4>Was wir sind</h4><p>Ein redaktionelles Vergleichsportal — wir sammeln, analysieren und bereiten Produktdaten übersichtlich auf.</p></div>
+          <div class="v1-card negative"><div class="v1-card-accent"></div><h4>Was wir nicht sind</h4><p>Kein Testinstitut — wir führen keine eigenen Warentests, Laboruntersuchungen oder physischen Prüfungen durch.</p></div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="v1-process">
-    <div class="v1-section">
-      <div class="v1-section-label">Arbeitsweise</div>
-      <h2>Unser Prozess in vier Schritten</h2>
-      <div class="v1-process-list">
-        <div class="v1-process-item"><div class="v1-process-num">01</div><div><h3>Datensammlung</h3><p>Wir recherchieren Herstellerangaben, technische Datenblätter, Kundenbewertungen und externe Testergebnisse von Stiftung Warentest, Öko-Test und Fachmagazinen.</p></div></div>
-        <div class="v1-process-item"><div class="v1-process-num">02</div><div><h3>Analyse</h3><p>Über 50 Fachredakteure bewerten nach objektiven Kriterien: Preis-Leistungs-Verhältnis, Ausstattung, Kundenzufriedenheit und verfügbare externe Tests.</p></div></div>
-        <div class="v1-process-item"><div class="v1-process-num">03</div><div><h3>Vergleichssieger</h3><p>Das Produkt mit der besten Gesamtbewertung wird als „Vergleichssieger" ausgezeichnet — basierend auf redaktioneller Auswertung, nicht eigenen Tests.</p></div></div>
-        <div class="v1-process-item"><div class="v1-process-num">04</div><div><h3>Veröffentlichung</h3><p>Wir präsentieren Ergebnisse in übersichtlichen Vergleichen, Tabellen und Ratgebern — täglich aktualisiert mit neuesten Preisen.</p></div></div>
+<!-- PROCESS -->
+<section class="v1-process">
+  <div class="v1-section">
+    <div class="v1-section-label">Arbeitsweise</div>
+    <h2>Unser Prozess in vier Schritten</h2>
+    <div class="v1-process-list">
+      <div class="v1-process-item"><div class="v1-process-num">01</div><div><h3>Datensammlung</h3><p>Wir recherchieren Herstellerangaben, technische Datenblätter, Kundenbewertungen und externe Testergebnisse von Stiftung Warentest, Öko-Test und Fachmagazinen.</p></div></div>
+      <div class="v1-process-item"><div class="v1-process-num">02</div><div><h3>Analyse</h3><p>Über 50 Fachredakteure bewerten nach objektiven Kriterien: Preis-Leistungs-Verhältnis, Ausstattung, Kundenzufriedenheit und verfügbare externe Tests.</p></div></div>
+      <div class="v1-process-item"><div class="v1-process-num">03</div><div><h3>Vergleichssieger</h3><p>Das Produkt mit der besten Gesamtbewertung wird als „Vergleichssieger" ausgezeichnet — basierend auf redaktioneller Auswertung, nicht eigenen Tests.</p></div></div>
+      <div class="v1-process-item"><div class="v1-process-num">04</div><div><h3>Veröffentlichung</h3><p>Wir präsentieren Ergebnisse in übersichtlichen Vergleichen, Tabellen und Ratgebern — täglich aktualisiert mit neuesten Preisen.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section>
+  <div class="v1-section">
+    <div class="v1-section-label">Der Unterschied</div>
+    <h2>Testinstitut vs. Vergleichsportal</h2>
+    <div class="v1-compare-grid">
+      <div class="v1-compare-col stiftung-col">
+        <h3>Stiftung Warentest</h3>
+        <ul class="v1-compare-list">
+          <li>Kauft Produkte anonym im Handel</li>
+          <li>Prüft physisch in eigenen Laboren</li>
+          <li>Führt standardisierte Messungen durch</li>
+          <li>Vergibt Noten nach eigenem Prüfsystem</li>
+          <li>Begrenzte Anzahl an Tests pro Jahr</li>
+        </ul>
+      </div>
+      <div class="v1-compare-vs"><span>vs.</span></div>
+      <div class="v1-compare-col tv2-col">
+        <h3>Test-Vergleiche.com</h3>
+        <ul class="v1-compare-list">
+          <li>Wertet öffentliche Daten aus</li>
+          <li>Vergleicht Herstellerangaben</li>
+          <li>Analysiert tausende Kundenbewertungen</li>
+          <li>Bezieht externe Testergebnisse ein</li>
+          <li>Über 20.000 Vergleiche verfügbar</li>
+        </ul>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section>
-    <div class="v1-section">
-      <div class="v1-section-label">Der Unterschied</div>
-      <h2>Testinstitut vs. Vergleichsportal</h2>
-      <div class="v1-compare-grid">
-        <div class="v1-compare-col stiftung-col">
-          <h3>Stiftung Warentest</h3>
-          <ul class="v1-compare-list">
-            <li>Kauft Produkte anonym im Handel</li>
-            <li>Prüft physisch in eigenen Laboren</li>
-            <li>Führt standardisierte Messungen durch</li>
-            <li>Vergibt Noten nach eigenem Prüfsystem</li>
-            <li>Begrenzte Anzahl an Tests pro Jahr</li>
+<!-- FAQ -->
+<section class="v1-faq-section">
+  <div class="v1-section">
+    <div class="v1-section-label">Fragen & Antworten</div>
+    <h2>Häufig gestellte Fragen</h2>
+    <div class="v1-faq-list">
+      <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Führt ihr eigene Produkttests durch?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Nein. Wir vergleichen Produkte auf Basis von Herstellerangaben, Kundenbewertungen und Testergebnissen Dritter wie Stiftung Warentest, Öko-Test und Fachmagazinen.</div></div></div>
+      <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Was bedeutet „Vergleichssieger"?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Das Produkt mit der besten Gesamtbewertung aller verfügbaren Daten. Es basiert auf Herstellerangaben, Kundenfeedback, externen Tests und Preis-Leistungs-Verhältnis — nicht auf eigenen physischen Tests.</div></div></div>
+      <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Können Hersteller ihre Platzierung kaufen?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Nein, definitiv nicht. Unsere Bewertungen sind vollkommen unabhängig. Hersteller können optional unser Siegel lizenzieren — die Auszeichnung selbst kann nicht gekauft werden.</div></div></div>
+      <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Wie finanziert sich Test-Vergleiche.com?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Durch Werbeeinnahmen und Affiliate-Provisionen. Wenn Sie über unsere Links kaufen, erhalten wir eine kleine Provision — für Sie entstehen keine zusätzlichen Kosten.</div></div></div>
+      <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Woher stammen eure Produktinformationen?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Herstellerangaben, technische Datenblätter, verifizierte Kundenbewertungen, Testergebnisse von Stiftung Warentest und Fachmagazinen, sowie aktuelle Preisinformationen.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNOFF -->
+<section class="v1-signoff">
+  <blockquote>„Unsere Unabhängigkeit ist nicht verhandelbar — Ihre Kaufentscheidung soll auf Fakten basieren."</blockquote>
+  <cite>— Ihr Test-Vergleiche.com Team</cite>
+</section>
+
+<!-- FOOTER -->
+<footer class="tv2-footer">
+  <div class="tv2-footer-inner">
+    <div class="tv2-footer-top">
+      <div class="tv2-footer-brand">
+        <h3>Test-Vergleiche.com</h3>
+        <p>Unabhängiges Vergleichsportal seit 2016. Wir vergleichen Produkte anhand von Herstellerangaben, Kundenbewertungen und Testergebnissen Dritter — transparent und ohne Herstellereinfluss.</p>
+      </div>
+      <div class="tv2-footer-links">
+        <div class="tv2-footer-col">
+          <h4>Kategorien</h4>
+          <ul>
+            <li><a href="https://test-vergleiche.com/baumarkt/">Baumarkt & Garten</a></li>
+            <li><a href="https://test-vergleiche.com/elektronik/">Elektronik</a></li>
+            <li><a href="https://test-vergleiche.com/haushalt/">Haushalt</a></li>
+            <li><a href="https://test-vergleiche.com/freizeit/">Freizeit</a></li>
+            <li><a href="https://test-vergleiche.com/drogerie/">Beauty & Drogerie</a></li>
           </ul>
         </div>
-        <div class="v1-compare-vs"><span>vs.</span></div>
-        <div class="v1-compare-col tv2-col">
-          <h3>Test-Vergleiche.com</h3>
-          <ul class="v1-compare-list">
-            <li>Wertet öffentliche Daten aus</li>
-            <li>Vergleicht Herstellerangaben</li>
-            <li>Analysiert tausende Kundenbewertungen</li>
-            <li>Bezieht externe Testergebnisse ein</li>
-            <li>Über 20.000 Vergleiche verfügbar</li>
+        <div class="tv2-footer-col">
+          <h4>Über uns</h4>
+          <ul>
+            <li><a href="https://test-vergleiche.com/unser-team/">Unser Team</a></li>
+            <li><a href="https://test-vergleiche.com/wie-wir-arbeiten/">So arbeiten wir</a></li>
+            <li><a href="https://test-vergleiche.com/vergleichssiegel/">Vergleichssiegel</a></li>
+            <li><a href="https://test-vergleiche.com/impressum/">Kontakt</a></li>
+          </ul>
+        </div>
+        <div class="tv2-footer-col">
+          <h4>Service</h4>
+          <ul>
+            <li><a href="https://test-vergleiche.com/sitemap-pages/">Sitemap</a></li>
+            <li><a href="https://test-vergleiche.com/service/ratgeber/">Ratgeber</a></li>
           </ul>
         </div>
       </div>
     </div>
-  </section>
-
-  <section class="v1-faq-section">
-    <div class="v1-section">
-      <div class="v1-section-label">Fragen & Antworten</div>
-      <h2>Häufig gestellte Fragen</h2>
-      <div class="v1-faq-list">
-        <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Führt ihr eigene Produkttests durch?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Nein. Wir vergleichen Produkte auf Basis von Herstellerangaben, Kundenbewertungen und Testergebnissen Dritter wie Stiftung Warentest, Öko-Test und Fachmagazinen.</div></div></div>
-        <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Was bedeutet „Vergleichssieger"?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Das Produkt mit der besten Gesamtbewertung aller verfügbaren Daten. Es basiert auf Herstellerangaben, Kundenfeedback, externen Tests und Preis-Leistungs-Verhältnis — nicht auf eigenen physischen Tests.</div></div></div>
-        <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Können Hersteller ihre Platzierung kaufen?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Nein, definitiv nicht. Unsere Bewertungen sind vollkommen unabhängig. Hersteller können optional unser Siegel lizenzieren — die Auszeichnung selbst kann nicht gekauft werden.</div></div></div>
-        <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Wie finanziert sich Test-Vergleiche.com?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Durch Werbeeinnahmen und Affiliate-Provisionen. Wenn Sie über unsere Links kaufen, erhalten wir eine kleine Provision — für Sie entstehen keine zusätzlichen Kosten.</div></div></div>
-        <div class="v1-faq-item"><div class="v1-faq-q" onclick="toggleFaq(this)"><h3>Woher stammen eure Produktinformationen?</h3><div class="v1-faq-toggle">+</div></div><div class="v1-faq-a"><div class="v1-faq-a-inner">Herstellerangaben, technische Datenblätter, verifizierte Kundenbewertungen, Testergebnisse von Stiftung Warentest und Fachmagazinen, sowie aktuelle Preisinformationen.</div></div></div>
+    <div class="tv2-footer-bottom">
+      <div class="tv2-footer-copy">© 2016–2026 Test-Vergleiche.com — TUROYS Verlagsgesellschaft GmbH</div>
+      <div class="tv2-footer-legal">
+        <a href="https://test-vergleiche.com/impressum/">Impressum</a>
+        <a href="https://test-vergleiche.com/datenschutz/">Datenschutz</a>
+        <a href="https://test-vergleiche.com/lizenz-agb/">AGB</a>
       </div>
     </div>
-  </section>
-
-  <section class="v1-signoff">
-    <blockquote>„Unsere Unabhängigkeit ist nicht verhandelbar — Ihre Kaufentscheidung soll auf Fakten basieren."</blockquote>
-    <cite>— Ihr Test-Vergleiche.com Team</cite>
-  </section>
+  </div>
+</footer>
 
 <script>
 function toggleFaq(el) {
